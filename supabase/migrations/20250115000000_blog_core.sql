@@ -57,6 +57,20 @@ CREATE TABLE IF NOT EXISTS public.articles (
     CONSTRAINT tags_required_for_publish CHECK (
         status IN ('draft', 'private')
         OR array_length(tags, 1) IS NOT NULL
+    ),
+    CONSTRAINT appearance_valid CHECK (
+        jsonb_typeof(appearance) = 'object'
+        AND jsonb_typeof(appearance -> 'font_size') = 'number'
+        AND jsonb_typeof(appearance -> 'left_padding') = 'number'
+        AND ((appearance ->> 'font_size')::numeric BETWEEN 14 AND 24)
+        AND ((appearance ->> 'left_padding')::numeric BETWEEN 0 AND 64)
+    ),
+    CONSTRAINT scheduled_time_required CHECK (
+        status != 'scheduled'
+        OR (
+            scheduled_time IS NOT NULL
+            AND scheduled_time > timezone('utc', now())
+        )
     )
 );
 
