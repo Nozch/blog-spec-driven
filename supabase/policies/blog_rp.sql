@@ -32,7 +32,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'articles'
-          AND polname = 'articles_select_own'
+          AND policyname = 'articles_select_own'
     ) THEN
         CREATE POLICY articles_select_own
             ON public.articles
@@ -47,7 +47,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'articles'
-          AND polname = 'articles_insert_own'
+          AND policyname = 'articles_insert_own'
     ) THEN
         CREATE POLICY articles_insert_own
             ON public.articles
@@ -62,7 +62,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'articles'
-          AND polname = 'articles_update_own'
+          AND policyname = 'articles_update_own'
     ) THEN
         CREATE POLICY articles_update_own
             ON public.articles
@@ -78,7 +78,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'articles'
-          AND polname = 'articles_delete_own'
+          AND policyname = 'articles_delete_own'
     ) THEN
         CREATE POLICY articles_delete_own
             ON public.articles
@@ -94,7 +94,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'draft_storage'
-          AND polname = 'draft_storage_select_own'
+          AND policyname = 'draft_storage_select_own'
     ) THEN
         CREATE POLICY draft_storage_select_own
             ON public.draft_storage
@@ -116,7 +116,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'draft_storage'
-          AND polname = 'draft_storage_write_own'
+          AND policyname = 'draft_storage_write_own'
     ) THEN
         CREATE POLICY draft_storage_write_own
             ON public.draft_storage
@@ -147,7 +147,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'publish_jobs'
-          AND polname = 'publish_jobs_select_own'
+          AND policyname = 'publish_jobs_select_own'
     ) THEN
         CREATE POLICY publish_jobs_select_own
             ON public.publish_jobs
@@ -169,7 +169,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'publish_jobs'
-          AND polname = 'publish_jobs_insert_author'
+          AND policyname = 'publish_jobs_insert_author'
     ) THEN
         CREATE POLICY publish_jobs_insert_author
             ON public.publish_jobs
@@ -191,7 +191,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'publish_jobs'
-          AND polname = 'publish_jobs_delete_author'
+          AND policyname = 'publish_jobs_delete_author'
     ) THEN
         CREATE POLICY publish_jobs_delete_author
             ON public.publish_jobs
@@ -213,7 +213,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'publish_jobs'
-          AND polname = 'publish_jobs_worker_update'
+          AND policyname = 'publish_jobs_worker_update'
     ) THEN
         CREATE POLICY publish_jobs_worker_update
             ON public.publish_jobs
@@ -230,7 +230,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'notifications'
-          AND polname = 'notifications_select_author'
+          AND policyname = 'notifications_select_author'
     ) THEN
         CREATE POLICY notifications_select_author
             ON public.notifications
@@ -252,7 +252,7 @@ BEGIN
         SELECT 1 FROM pg_policies
         WHERE schemaname = 'public'
           AND tablename = 'notifications'
-          AND polname = 'notifications_worker_manage'
+          AND policyname = 'notifications_worker_manage'
     ) THEN
         CREATE POLICY notifications_worker_manage
             ON public.notifications
