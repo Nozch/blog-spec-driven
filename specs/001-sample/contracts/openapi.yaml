@@ -1,0 +1,245 @@
+openapi: 3.1.0
+info:
+  title: Personal Blog Publishing API
+  version: 0.1.0
+  description: REST contracts for composing, importing, scheduling, and categorizing personal blog posts.
+servers:
+  - url: https://blog.example.com
+paths:
+  /api/articles:
+    get:
+      summary: List published articles with pagination & category filter
+      parameters:
+        - in: query
+          name: category
+          required: true
+          schema:
+            $ref: '#/components/schemas/Category'
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        '200':
+          description: Paginated articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedArticles'
+    post:
+      summary: Create/compose an article in-browser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleComposeRequest'
+      responses:
+        '201':
+          description: Draft saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+  /api/articles/import:
+    post:
+      summary: Import Markdown/MDX manuscript
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required: [file]
+      responses:
+        '201':
+          description: Import success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '400':
+          description: Validation failure (size > 8 MB or unsupported format)
+  /api/articles/{articleId}/schedule:
+    post:
+      summary: Schedule a draft for publication (JST minute precision)
+      parameters:
+        - in: path
+          name: articleId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scheduledTimeJst:
+                  type: string
+                  format: date-time
+                  description: ISO timestamp in JST; must be in the future
+              required: [scheduledTimeJst]
+      responses:
+        '202':
+          description: Job accepted
+        '409':
+          description: Schedule conflict or past time selected
+  /api/articles/{articleId}/toggle:
+    post:
+      summary: Toggle a published article back to private or re-publish
+      parameters:
+        - in: path
+          name: articleId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetStatus:
+                  type: string
+                  enum: [private, published]
+              required: [targetStatus]
+      responses:
+        '200':
+          description: Status updated and caches queued for purge
+  /api/articles/{articleId}/tags/suggest:
+    post:
+      summary: Request tag suggestions for the current article content
+      parameters:
+        - in: path
+          name: articleId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  description: MDX content analyzed for keywords
+              required: [body]
+      responses:
+        '200':
+          description: Suggested tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+                    maxItems: 5
+components:
+  schemas:
+    Category:
+      type: string
+      enum: [music, movie, tech, blog]
+    ArticleComposeRequest:
+      type: object
+      required: [title, category, bodyMdx, bodyTipTap, appearance, tags]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+        category:
+          $ref: '#/components/schemas/Category'
+        bodyMdx:
+          type: string
+          description: Markdown/MDX source (<= 8 MB)
+        bodyTipTap:
+          type: object
+          description: TipTap JSON tree mirroring editor state
+        tags:
+          type: array
+          minItems: 0
+          items:
+            type: string
+        appearance:
+          type: object
+          properties:
+            fontSize:
+              type: integer
+              minimum: 14
+              maximum: 24
+            leftPadding:
+              type: integer
+              minimum: 0
+              maximum: 64
+        status:
+          type: string
+          enum: [draft, scheduled, published, private]
+        scheduledTimeJst:
+          type: string
+          format: date-time
+          nullable: true
+    ArticleResponse:
+      type: object
+      properties:
+        articleId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        draftUrl:
+          type: string
+          format: uri
+        scheduledTimeJst:
+          type: string
+          format: date-time
+          nullable: true
+    PaginatedArticles:
+      type: object
+      properties:
+        category:
+          $ref: '#/components/schemas/Category'
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              articleId:
+                type: string
+                format: uuid
+              title:
+                type: string
+              summary:
+                type: string
+              publishedAt:
+                type: string
+                format: date-time
+              appearance:
+                type: object
+                properties:
+                  fontSize:
+                    type: integer
+                  leftPadding:
+                    type: integer

@@ -1,0 +1,10 @@
+{
+  "name": "blog-spec",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "test": "pnpm -r test",
+    "playwright": "pnpm --filter apps/web playwright test",
+    "k6": "k6 run perf/first-paint.js"
+  }
+}
