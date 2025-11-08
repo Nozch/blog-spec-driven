@@ -12,6 +12,15 @@
 ### Session 2025-11-07
 - Q: How many articles should each category page list per pagination step? → A: 12 posts per page
 
+## Outstanding Ambiguities
+
+- **FR-012 / FR-013 Messaging**: File-size warning copy and failure email template remain `[NEEDS CLARIFICATION]`; final wording + timing are required.
+- **Draft Access Beyond Author**: Draft privacy (FR-004) assumes single-author access but does not state whether admins/support can view drafts or how escalations work.
+- **Scheduling Precision Edge Cases**: Minute-level JST scheduling lacks guidance for edge cases (e.g., DST—not observed—and sub-minute submissions); call out whether these are in or out of scope.
+- **Auto Tag Fallback Rules**: Define how tag suggestions behave for very short or multilingual drafts so manual-only workflows are well understood.
+- **Category Pagination Zero/Overflow States**: FR-011 should capture empty-category UX and >N-page scenarios currently relegated to Edge Cases for better traceability.
+- **Performance Metric Measurement**: SC-001 and SC-004 specify targets but not measurement method (tools, sampling window); add methodology to avoid disputes.
+- **Operational Runbook Fields**: OR-003 references a runbook/on-call owner but omits required fields or doc location; clarify expectations for rollout readiness.
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Compose & Edit In-Browser (Priority: P1)
