@@ -1,5 +1,4 @@
 ---
-
 description: "Task list for Personal Blog Publishing Flow"
 ---
 
@@ -28,10 +27,10 @@ description: "Task list for Personal Blog Publishing Flow"
 
 **Purpose**: Establish workspace layout, environment scaffolding, and shared tooling.
 
-- [X] T001 Create workspace directories (`apps/web`, `packages/editor`, `packages/importer`, `packages/scheduler-sdk`, `services/publisher`, `infra/terraform`) and register them in `pnpm-workspace.yaml`.
-- [X] T002 Define `.env.example` with all config keys from quickstart (`SUPABASE_URL`, `S3_DRAFT_BUCKET`, `UPSTASH_REDIS_REST_URL`, etc.) in repo root.
-- [X] T003 Configure base lint/test scripts in `package.json` and ensure `pnpm test`, `pnpm playwright test`, and `pnpm k6` commands exist.
-- [X] T004 Add feature flag toggle `personal-blog-publishing` to `infra/terraform/feature-flags.tf` with default `off`.
+- [x] T001 Create workspace directories (`apps/web`, `packages/editor`, `packages/importer`, `packages/scheduler-sdk`, `services/publisher`, `infra/terraform`) and register them in `pnpm-workspace.yaml`.
+- [x] T002 Define `.env.example` with all config keys from quickstart (`SUPABASE_URL`, `S3_DRAFT_BUCKET`, `UPSTASH_REDIS_REST_URL`, etc.) in repo root.
+- [x] T003 Configure base lint/test scripts in `package.json` and ensure `pnpm test`, `pnpm playwright test`, and `pnpm k6` commands exist.
+- [x] T004 Add feature flag toggle `personal-blog-publishing` to `infra/terraform/feature-flags.tf` with default `off`.
 
 ---
 
@@ -39,9 +38,9 @@ description: "Task list for Personal Blog Publishing Flow"
 
 **Purpose**: Shared infrastructure that all stories depend on.
 
-- [ ] T005 Create Supabase migration defining Article, DraftStorage, PublishJob, Notifications tables plus indexes in `supabase/migrations/<ts>_blog_core.sql`.
-- [ ] T006 Add Supabase row-level security policies & RPC helpers for author-only drafts in `supabase/policies/blog_rp.sql`.
-- [ ] T007 Provision encrypted S3 bucket + IAM policy for draft blobs in `infra/terraform/s3-drafts.tf` with SSE-S3 enforced.
+- [x] T005 Create Supabase migration defining Article, DraftStorage, PublishJob, Notifications tables plus indexes in `supabase/migrations/<ts>_blog_core.sql`.
+- [x] T006 Add Supabase row-level security policies & RPC helpers for author-only drafts in `supabase/policies/blog_rp.sql`.
+- [x] T007 Provision encrypted S3 bucket + IAM policy for draft blobs in `infra/terraform/s3-drafts.tf` with SSE-S3 enforced.
 - [ ] T008 Provision Upstash Redis + BullMQ queue config and outputs in `infra/terraform/redis-publisher.tf`.
 - [ ] T009 [P] Build shared TypeScript types + API client utilities for articles/jobs in `packages/scheduler-sdk/src/index.ts`.
 - [ ] T010 [P] Implement shared telemetry/logger wrapper emitting metrics defined in OR-002 at `packages/scheduler-sdk/src/telemetry.ts`.
@@ -150,17 +149,20 @@ description: "Task list for Personal Blog Publishing Flow"
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
+
 - Setup (Phase 1) → prerequisite for Foundational.
 - Foundational (Phase 2) → prerequisite for all user stories.
 - US1 is MVP and must complete before deployment; US2 can run parallel after Foundational; US3 begins once Supabase + queue infra ready but can overlap with US2 except where sharing UI components.
 - Polish phase runs after desired user stories complete.
 
 ### User Story Dependencies
+
 - US1: no dependencies once Phase 2 done.
 - US2: depends on importer package + storage from Phase 2 but not on US1 completion.
 - US3: depends on Phase 2 plus basic Article persistence (US1) so scheduling edits operate on same Article model.
 
 ### Parallel Opportunities
+
 - Tasks tagged [P] can run concurrently (e.g., shared SDK + telemetry, contract tests across stories, worker test harness).
 - Different user stories (US2 vs US3) may proceed in parallel after Foundational completion provided they avoid shared files.
 
@@ -177,15 +179,18 @@ pnpm concurrently "pnpm --filter apps/web test -- import" "pnpm --filter package
 ## Implementation Strategy
 
 ### MVP First (User Story 1 Only)
+
 1. Complete Setup + Foundational.
 2. Deliver US1 compose flow with editor, persistence, tagging, and publish.
 3. Validate via Jest + Playwright tests; release to pilot behind feature flag.
 
 ### Incremental Delivery
+
 1. Add US2 import pipeline once MVP is stable; ship after import-specific tests pass.
 2. Layer in US3 scheduling + category pagination; monitor publish success metrics and failure emails.
 
 ### Parallel Team Strategy
+
 - Developer A owns US1 editor experience.
 - Developer B builds importer + validations (US2).
 - Developer C implements scheduler worker + pagination (US3).
