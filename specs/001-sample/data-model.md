@@ -12,7 +12,7 @@
 | category | enum(`music`,`movie`,`tech`,`blog`) | Yes | Drives header navigation |
 | status | enum(`draft`,`scheduled`,`published`,`private`) | Yes | `private` represents unpublished toggle |
 | appearance | jsonb { font_size:number, left_padding:number } | Yes | Font size 14–24px, padding 0–64px |
-| scheduled_time | timestamptz nullable | No | Stored in UTC; must be >= now() when status = scheduled |
+| scheduled_time | timestamptz nullable | No | Stored in UTC; when `status = scheduled` it MUST be non-null and strictly greater than `timezone('utc', now())` |
 | published_at | timestamptz nullable | No | Set when status transitions to published |
 | created_at | timestamptz | Yes | Defaults to now() |
 | updated_at | timestamptz | Yes | Updated on write |
