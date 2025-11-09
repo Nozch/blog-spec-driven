@@ -1,2 +1,14 @@
 .codex
 supabase/.temp/*
+
+# Terraform local state
+*.tfstate
+*.tfstate.*
+**/.terraform/
+
+# Local sercets / env-specific vars
+*.tfvars
+*.tfvars.json
+
+# Terraform plan files
+*.tfplan
