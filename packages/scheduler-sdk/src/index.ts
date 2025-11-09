@@ -211,7 +211,7 @@ export class SchedulerClient {
     if (payload.appearance) {
       this.assertAppearance(payload.appearance);
     }
-    if (payload.scheduledTimeJst) {
+    if (payload.scheduledTimeJst !== undefined && payload.scheduledTimeJst !== null) {
       this.assertFutureInstant(payload.scheduledTimeJst);
     }
     return this.request<Article>(`articles/${id}`, {
@@ -359,7 +359,7 @@ export class SchedulerClient {
       throw new ValidationError('tags must include at least one entry');
     }
     this.assertAppearance(payload.appearance);
-    if (payload.scheduledTimeJst) {
+    if (payload.scheduledTimeJst !== undefined && payload.scheduledTimeJst !== null) {
       this.assertFutureInstant(payload.scheduledTimeJst);
     }
   }
