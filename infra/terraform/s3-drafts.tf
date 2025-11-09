@@ -1,22 +1,7 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.46"
-    }
-  }
-}
-
 variable "aws_region" {
   type        = string
   description = "AWS region where draft storage bucket lives"
   default     = "ap-northeast-1"
-}
-
-variable "environment" {
-  type        = string
-  description = "Deployment environment suffix (e.g., dev, staging, prod)"
-  default     = "dev"
 }
 
 provider "aws" {
