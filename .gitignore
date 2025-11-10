@@ -13,8 +13,7 @@ supabase/.temp/*
 # Terraform plan files
 *.tfplan
 
-# pnpm
-node_modules/*
+**/node_modules/
 
 # Playwright artifacts
 apps/web/playwright-report/
@@ -24,3 +23,6 @@ apps/web/test-results/
 **/dist/
 **/*.tsbuildinfo
 pnpm-debug.log
+
+# Next.js build
+**/.next/
