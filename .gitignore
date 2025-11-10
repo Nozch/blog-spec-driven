@@ -12,3 +12,11 @@ supabase/.temp/*
 
 # Terraform plan files
 *.tfplan
+
+# pnpm
+node_modules/*
+
+# TypeScript build related files
+**/dist/
+**/*.tsbuildinfo
+pnpm-debug.log
