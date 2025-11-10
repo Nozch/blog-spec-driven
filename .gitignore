@@ -26,3 +26,21 @@ pnpm-debug.log
 
 # Next.js build
 **/.next/
+
+# Vitest/Jest coverage
+**/coverage/
+
+# Tooling caches
+.turbo/
+.vercel/
+.eslintcache
+
+# Local environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# pnpm global store
+.pnpm-store/
