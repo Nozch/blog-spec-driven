@@ -41,9 +41,9 @@ description: "Task list for Personal Blog Publishing Flow"
 - [x] T005 Create Supabase migration defining Article, DraftStorage, PublishJob, Notifications tables plus indexes in `supabase/migrations/<ts>_blog_core.sql`.
 - [x] T006 Add Supabase row-level security policies & RPC helpers for author-only drafts in `supabase/policies/blog_rp.sql`.
 - [x] T007 Provision encrypted S3 bucket + IAM policy for draft blobs in `infra/terraform/s3-drafts.tf` with SSE-S3 enforced.
-- [ ] T008 Provision Upstash Redis + BullMQ queue config and outputs in `infra/terraform/redis-publisher.tf`.
-- [ ] T009 [P] Build shared TypeScript types + API client utilities for articles/jobs in `packages/scheduler-sdk/src/index.ts`.
-- [ ] T010 [P] Implement shared telemetry/logger wrapper emitting metrics defined in OR-002 at `packages/scheduler-sdk/src/telemetry.ts`.
+- [x] T008 Provision Upstash Redis + BullMQ queue config and outputs in `infra/terraform/redis-publisher.tf`.
+- [x] T009 [P] Build shared TypeScript types + API client utilities for articles/jobs in `packages/scheduler-sdk/src/index.ts`.
+- [x] T010 [P] Implement shared telemetry/logger wrapper emitting metrics defined in OR-002 at `packages/scheduler-sdk/src/telemetry.ts`.
 
 **Checkpoint**: Database, storage, queue, and shared SDK ready—user stories can proceed independently.
 

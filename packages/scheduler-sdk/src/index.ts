@@ -399,3 +399,5 @@ export class SchedulerClient {
     }
   }
 }
+
+export * from './telemetry.js';
