@@ -1,7 +1,7 @@
 {
   "name": "blog-spec",
   "private": true,
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.20.0",
   "scripts": {
     "test": "pnpm -r test",
     "playwright": "pnpm --filter apps/web playwright test",
@@ -12,6 +12,7 @@
     "@typescript-eslint/eslint-plugin": "^8.46.3",
     "@typescript-eslint/parser": "^8.46.3",
     "eslint": "^9.39.1",
+    "playwright": "^1.56.1",
     "typescript": "^5.9.3"
   }
 }

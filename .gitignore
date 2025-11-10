@@ -16,6 +16,10 @@ supabase/.temp/*
 # pnpm
 node_modules/*
 
+# Playwright artifacts
+apps/web/playwright-report/
+apps/web/test-results/
+
 # TypeScript build related files
 **/dist/
 **/*.tsbuildinfo
