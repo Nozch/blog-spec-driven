@@ -358,6 +358,9 @@ export class SchedulerClient {
     if (!payload.tags?.length) {
       throw new ValidationError('tags must include at least one entry');
     }
+    if (!payload.appearance) {
+      throw new ValidationError('appearance is required');
+    }
     this.assertAppearance(payload.appearance);
     if (payload.scheduledTimeJst !== undefined && payload.scheduledTimeJst !== null) {
       this.assertFutureInstant(payload.scheduledTimeJst);
