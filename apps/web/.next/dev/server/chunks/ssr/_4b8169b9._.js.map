@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/nozch/blog_spec/apps/web/app/layout.tsx"],"sourcesContent":["export default function RootLayout({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"ja\">\n      <body>{children}</body>\n    </html>\n  );\n}\n"],"names":[],"mappings":";;;;;;AAAe,SAAS,WAAW,EAAE,QAAQ,EAAiC;IAC5E,qBACE,oZAAC;QAAK,MAAK;kBACT,cAAA,oZAAC;sBAAM;;;;;;;;;;;AAGb","debugId":null}},
-    {"offset": {"line": 30, "column": 0}, "map": {"version":3,"sources":["file:///Users/nozch/blog_spec/node_modules/.pnpm/next%4016.0.1_%40playwright%2Btest%401.56.1_react-dom%4019.2.0_react%4019.2.0__react%4019.2.0/node_modules/next/src/server/route-modules/app-page/vendored/rsc/react-jsx-dev-runtime.ts"],"sourcesContent":["module.exports = (\n  require('../../module.compiled') as typeof import('../../module.compiled')\n).vendored['react-rsc']!.ReactJsxDevRuntime\n"],"names":["module","exports","require","vendored","ReactJsxDevRuntime"],"mappings":"AAAAA,OAAOC,OAAO,GACZC,QAAQ,+NACRC,QAAQ,CAAC,YAAY,CAAEC,kBAAkB","ignoreList":[0],"debugId":null}}]
-}
