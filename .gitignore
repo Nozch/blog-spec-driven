@@ -14,7 +14,8 @@ supabase/.temp/*
 *.tfplan
 
 # pnpm
-node_modules/*
+**/node_modules/
+**/.vite/
 
 # TypeScript build related files
 **/dist/

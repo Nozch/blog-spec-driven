@@ -15,9 +15,9 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
 };
 
 export const IMAGE_WIDTH_RANGE = { min: 240, max: 1200 } as const;
-const DEFAULT_IMAGE_WIDTH = 720;
+export const DEFAULT_IMAGE_WIDTH = 720;
 
-const DEFAULT_ASPECT_RATIO = 0.5625; // 16:9 in height percentage
+export const DEFAULT_ASPECT_RATIO = 16 / 9; // 16:9 landscape ratio
 
 export interface ImageEmbedAttributes {
   src: string;
@@ -34,7 +34,7 @@ export interface VideoEmbedAttributes {
 
 type VideoProvider = 'youtube' | 'vimeo';
 
-const SUPPORTED_VIDEO_HOSTS: Record<string, VideoProvider> = {
+export const SUPPORTED_VIDEO_HOSTS: Record<string, VideoProvider> = {
   'youtube.com': 'youtube',
   'www.youtube.com': 'youtube',
   'youtu.be': 'youtube',
@@ -47,7 +47,7 @@ const SUPPORTED_VIDEO_HOSTS: Record<string, VideoProvider> = {
 const clamp = (value: number, range: { min: number; max: number }) =>
   Math.min(range.max, Math.max(range.min, value));
 
-const sanitizeUrl = (value?: string | null): string | null => {
+export const sanitizeUrl = (value?: string | null): string | null => {
   if (!value) {
     return null;
   }
@@ -80,7 +80,7 @@ const normalizeImageAttrs = (
   };
 };
 
-const normalizeVideoAttrs = (
+export const normalizeVideoAttrs = (
   attrs: VideoEmbedAttributes
 ): (VideoEmbedAttributes & { provider: VideoProvider; aspectRatio: number }) | null => {
   const src = sanitizeUrl(attrs.src);

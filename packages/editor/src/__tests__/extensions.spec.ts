@@ -1,7 +1,7 @@
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import {
-  APPEARANCE_DEFAULTS,
+  DEFAULT_APPEARANCE,
   FONT_SIZE_RANGE,
   LEFT_PADDING_RANGE,
   IMAGE_WIDTH_RANGE,
@@ -76,7 +76,7 @@ describe('media embeds', () => {
 describe('appearance controls', () => {
   it('exposes defaults on storage', () => {
     const editor = buildEditor();
-    expect(getAppearanceSettings(editor)).toEqual(APPEARANCE_DEFAULTS);
+    expect(getAppearanceSettings(editor)).toEqual(DEFAULT_APPEARANCE);
   });
 
   it('clamps font size and padding inside allowed ranges', () => {
@@ -95,11 +95,11 @@ describe('appearance controls', () => {
     const editor = buildEditor();
     editor.commands.setAppearance({ leftPadding: 48 });
     expect(getAppearanceSettings(editor)).toMatchObject({
-      fontSize: APPEARANCE_DEFAULTS.fontSize,
+      fontSize: DEFAULT_APPEARANCE.fontSize,
       leftPadding: 48
     });
 
     editor.commands.resetAppearance();
-    expect(getAppearanceSettings(editor)).toEqual(APPEARANCE_DEFAULTS);
+    expect(getAppearanceSettings(editor)).toEqual(DEFAULT_APPEARANCE);
   });
 });

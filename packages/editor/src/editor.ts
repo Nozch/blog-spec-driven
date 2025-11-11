@@ -2,12 +2,15 @@ import { Editor, type EditorOptions, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import {
   DEFAULT_APPEARANCE,
+  DEFAULT_ASPECT_RATIO,
   type AppearanceSettings,
   createExtensionKit,
   getAppearanceSettings,
   IMAGE_WIDTH_RANGE,
   type ImageEmbedAttributes,
-  type VideoEmbedAttributes
+  type VideoEmbedAttributes,
+  normalizeVideoAttrs,
+  sanitizeUrl
 } from './extensions';
 
 export interface CreateEditorOptions {
@@ -77,11 +80,10 @@ export const mdxToJSON = (mdx: string): JSONContent => ({
 
 export const jsonToMDX = (json: JSONContent): string => serializeBlocks(json.content ?? []);
 
-const normalizeLines = (input: string): string[] =>
-  input
-    .replace(/\r\n/g, '\n')
-    .split('\n')
-    .map((line) => line.trimEnd());
+const normalizeLines = (input: string): string[] => input.replace(/\r\n/g, '\n').split('\n');
+
+const clampNumber = (value: number, range: { min: number; max: number }) =>
+  Math.min(range.max, Math.max(range.min, value));
 
 type Block = JSONContent;
 
@@ -269,11 +271,16 @@ const serializeBlock = (node: Block): string => {
     }
     case 'imageFigure': {
       const attrs = node.attrs as ImageEmbedAttributes;
-      return `<ImageFigure src="${attrs.src}" alt="${attrs.alt ?? ''}" caption="${attrs.caption ?? ''}" width={${attrs.width ?? IMAGE_WIDTH_RANGE.min}} />`;
+      const widthAttr = typeof attrs.width === 'number' ? ` width={${attrs.width}}` : '';
+      return `<ImageFigure src=${jsxString(attrs.src)} alt=${jsxString(attrs.alt)} caption=${jsxString(
+        attrs.caption
+      )}${widthAttr} />`;
     }
     case 'videoEmbed': {
       const attrs = node.attrs as VideoComponentAttributes;
-      return `<VideoEmbed src="${attrs.src}" title="${attrs.title ?? ''}" provider="${attrs.provider ?? 'youtube'}" aspectRatio={${attrs.aspectRatio ?? 0.5625}} />`;
+      return `<VideoEmbed src=${jsxString(attrs.src)} title=${jsxString(attrs.title)} provider=${jsxString(
+        attrs.provider ?? 'youtube'
+      )} aspectRatio={${attrs.aspectRatio ?? DEFAULT_ASPECT_RATIO}} />`;
     }
     default:
       return '';
@@ -362,6 +369,15 @@ const createMarkedNode = (token: string): JSONContent => {
   };
 };
 
+const jsxString = (value: string | null | undefined) => `{${JSON.stringify(value ?? '')}}`;
+
+type ImageFigureAttrs = {
+  src: string;
+  width?: number;
+  aspectRatio?: number;
+  [key: string]: unknown;
+};
+
 function parseComponent(line: string, component: 'ImageFigure'): ImageEmbedAttributes | null;
 function parseComponent(line: string, component: 'VideoEmbed'): (VideoComponentAttributes & { provider: string }) | null;
 function parseComponent(line: string, component: 'ImageFigure' | 'VideoEmbed') {
@@ -370,37 +386,52 @@ function parseComponent(line: string, component: 'ImageFigure' | 'VideoEmbed') {
   }
 
   const attrPattern = /(\w+)=(?:"([^"]*)"|{([^}]+)})/g;
-  const attrs: Record<string, string> = {};
+  const attrs: ImageFigureAttrs = Object.create(null);
   for (const match of line.matchAll(attrPattern)) {
     const [, key, quoted, braced] = match;
-    attrs[key] = quoted ?? braced ?? '';
+    if (braced) {
+      try {
+        attrs[key] = JSON.parse(braced);
+      } catch {
+        // ignore invalid JSON; leave undefined
+      }
+    } else {
+      attrs[key] = quoted ?? '';
+    }
   }
 
   if (component === 'ImageFigure') {
-    if (!attrs.src) {
+    if (typeof attrs.src !== 'string' || !attrs.src) {
       return null;
     }
-    const width = Number(attrs.width ?? IMAGE_WIDTH_RANGE.min);
+    const sanitizedSrc = sanitizeUrl(attrs.src);
+    if (!sanitizedSrc) {
+      return null;
+    }
+    let width: number | undefined;
+    if (typeof attrs.width === 'number') {
+      width = clampNumber(attrs.width, IMAGE_WIDTH_RANGE);
+    }
     const parsed: ImageEmbedAttributes = {
-      src: attrs.src,
+      src: sanitizedSrc,
       alt: attrs.alt ?? '',
       caption: attrs.caption ?? '',
-      width: Number.isFinite(width) ? width : IMAGE_WIDTH_RANGE.min
+      width
     };
     return parsed;
   }
 
-  if (!attrs.src || !attrs.provider) {
+  const normalized = normalizeVideoAttrs({
+    src: typeof attrs.src === 'string' ? attrs.src : '',
+    title: typeof attrs.title === 'string' ? attrs.title : '',
+    aspectRatio: typeof attrs.aspectRatio === 'number' ? attrs.aspectRatio : undefined
+  });
+
+  if (!normalized) {
     return null;
   }
-  const aspectRatio = Number(attrs.aspectRatio ?? 0.5625);
-  const result: VideoComponentAttributes & { provider: string } = {
-    src: attrs.src,
-    title: attrs.title ?? '',
-    provider: attrs.provider,
-    aspectRatio: Number.isFinite(aspectRatio) ? aspectRatio : 0.5625
-  };
-  return result;
+
+  return normalized;
 }
 
 export const buildEmptyState = (): JSONContent => ({
