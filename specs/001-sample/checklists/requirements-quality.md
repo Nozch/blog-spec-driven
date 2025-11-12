@@ -8,24 +8,44 @@
 
 ## Compose & Draft Experience
 
-- [ ] CHK001 Are the formatting/appearance capabilities in FR-001 and FR-009 enumerated with measurable coverage (e.g., embed types, padding/font ranges) so reviewers can confirm all required controls exist?
-- [ ] CHK002 Do draft privacy requirements (FR-004, Edge Case “Draft Access Beyond Author”) specify who besides the author may access drafts, how escalations are logged, and what audit evidence is required?
+- [X] CHK001 Are the formatting/appearance capabilities in FR-001 and FR-009 enumerated with measurable coverage (e.g., embed types, padding/font ranges) so reviewers can confirm all required controls exist?
+  **✓ COMPLETE**: FR-001 explicitly lists headings, bold, italic, code blocks, image embeds, video embeds. FR-009 specifies font size and left padding. openapi.yaml:183-190 defines fontSize (14-24px) and leftPadding (0-64px) with exact ranges.
+
+- [ ] CHK002 Do draft privacy requirements (FR-004, Edge Case "Draft Access Beyond Author") specify who besides the author may access drafts, how escalations are logged, and what audit evidence is required?
+  **✗ INCOMPLETE**: FR-004 states "accessible only to the author" but Outstanding Ambiguities explicitly flags "Draft Access Beyond Author" as unresolved. Admin/support access scenarios and escalation logging are undefined.
+
 - [ ] CHK003 Is the persistence contract for appearance settings (FR-009, Tasks T015–T019) explicit about preview vs. published rendering parity and failure behavior if settings are missing or invalid?
+  **✗ INCOMPLETE**: FR-009 requires persistence, openapi.yaml includes appearance in request/response schemas, but no explicit statement about preview vs published rendering parity or graceful degradation when settings are invalid/missing.
 
 ## Import & Asset Validation
 
-- [ ] CHK004 Do FR-002 and FR-012 clearly define warning/error copy, remediation steps, and doc links for oversized MD/MDX files or referenced assets so UX writers know the exact text?
-- [ ] CHK005 Are fallback rules for auto tag suggestions (Edge Case “Auto Tag Fallback Rules”, FR-003) specified for very short or multilingual drafts so manual-only workflows are unambiguous?
-- [ ] CHK006 Is unsupported-format handling (FR-002) explicit about accepted extensions, MIME validation, and messaging so reviewers can tell when a format must be rejected vs. converted?
+- [X] CHK004 Do FR-002 and FR-012 clearly define warning/error copy, remediation steps, and doc links for oversized MD/MDX files or referenced assets so UX writers know the exact text?
+  **✓ COMPLETE**: FR-012 provides exact copy: "Upload blocked: `[filename]` is [actual_size] MB. Files must be ≤8 MB. See docs/blog/import-limits for guidance." Includes toast visibility duration (10s or until dismissed). spec.md:16-17 clarifies this from Session 2025-11-12.
+
+- [ ] CHK005 Are fallback rules for auto tag suggestions (Edge Case "Auto Tag Fallback Rules", FR-003) specified for very short or multilingual drafts so manual-only workflows are unambiguous?
+  **✗ INCOMPLETE**: Edge Cases:112 mentions fallback for short/multilingual articles, but Outstanding Ambiguities explicitly flags "Auto Tag Fallback Rules" as unresolved. No specification of threshold lengths or multilingual detection strategy.
+
+- [X] CHK006 Is unsupported-format handling (FR-002) explicit about accepted extensions, MIME validation, and messaging so reviewers can tell when a format must be rejected vs. converted?
+  **✓ COMPLETE**: FR-002 explicitly allows ".md and .mdx files up to 8 MB". User Story 2 Scenario 3 (spec.md:73-76) shows .docx rejection with clear messaging. openapi.yaml:69 returns 400 for validation failures (size/format). research.md:3-6 confirms Contentlayer parses only MD/MDX.
 
 ## Scheduling, Notifications & State Transitions
 
-- [ ] CHK007 Are scheduling constraints (FR-005, FR-010, Tasks T016–T020) explicit about timezone conversion, rounding to minute precision, and how edits near publish time avoid duplicate runs?
+- [X] CHK007 Are scheduling constraints (FR-005, FR-010, Tasks T016–T020) explicit about timezone conversion, rounding to minute precision, and how edits near publish time avoid duplicate runs?
+  **✓ COMPLETE**: FR-005 specifies "JST with minute-level precision, disallowing past times". FR-010 requires prompt on edit to confirm/revise schedule. research.md:18-20 explains BullMQ+Upstash Redis with UTC storage. data-model.md:16 stores scheduled_time as timestamptz (UTC). Edge Cases:110 addresses no-duplicate-publish scenario. openapi.yaml:88-90 shows ISO timestamp in JST.
+
 - [ ] CHK008 Does the requirement linking `status='scheduled'` to `scheduled_time > now()` (spec + data model + T005) describe how invalid states are prevented/detected, including what happens if Supabase block fails?
-- [ ] CHK009 Is the unpublish+cache-purge flow (FR-007, Edge Case “Toggling a published article back to private”) documented with SLA measurement method and rollback steps so ops can verify compliance?
+  **~ PARTIAL**: data-model.md:16 explicitly states "when `status = scheduled` it MUST be non-null and strictly greater than `timezone('utc', now())`". However, enforcement mechanism (DB constraint, application validation, or both) and failure handling are not documented. Edge Cases:109 prevents past times at UI level but doesn't specify database-level enforcement.
+
+- [ ] CHK009 Is the unpublish+cache-purge flow (FR-007, Edge Case "Toggling a published article back to private") documented with SLA measurement method and rollback steps so ops can verify compliance?
+  **~ PARTIAL**: FR-007 specifies "removed from public listings within 60 seconds" SLA. openapi.yaml:98-120 defines /toggle endpoint with cache purge comment. Edge Cases:114 confirms purge requirement. However, SLA measurement methodology (monitoring tool, metrics, sampling) and operational rollback steps are not documented.
 
 ## Observability, Success Metrics & Runbooks
 
 - [ ] CHK010 Do success criteria SC-001 through SC-005 include measurement methodology (tools, sampling windows) to remove ambiguity called out in Outstanding Ambiguities?
+  **✗ INCOMPLETE**: SC-001 through SC-005 define clear targets (<1s first paint, 100% encryption, ≥95% publish success, ≤5s import, ≥4/5 satisfaction). quickstart.md:49 mentions k6 for first-paint testing. However, Outstanding Ambiguities explicitly flags "Performance Metric Measurement" as unresolved—no specification of monitoring tools, sampling windows, or metric collection methodology for production validation.
+
 - [ ] CHK011 Are logging/metrics requirements (OR-001/002, Tasks T018/T040) mapped to concrete fields, retention expectations, and responsible services so telemetry coverage can be audited?
+  **~ PARTIAL**: OR-001 specifies what to log (editor actions, validation failures, publish status) with author_id, article_id, timestamp. OR-002 lists specific metrics (frontend.first_paint_ms, import.duration_ms, publish.success_rate, etc.). tasks.md:T024 mentions logger.ts and T028 mentions telemetry.ts. However, log retention policies, metric aggregation windows, and service ownership assignments are not documented.
+
 - [ ] CHK012 Does OR-003 specify the runbook location, required fields (owner, rollback steps, alert routing), and approval workflow so rollout readiness can be objectively checked?
+  **✗ INCOMPLETE**: OR-003 mentions "on-call owner documented in runbook" and rollback via feature flag, but Outstanding Ambiguities explicitly flags "Operational Runbook Fields" as unresolved. quickstart.md:63 shows deployment but not incident response procedures. No specification of runbook location, required sections, or approval workflow. tasks.md:T102 references docs/runbooks/rollback.md but content undefined.

@@ -80,7 +80,7 @@ Based on plan.md, this is a web monorepo with:
 
 - [X] T030 [P] [US1] Create TipTap extension for headings in packages/editor/src/extensions/heading.ts
 - [X] T031 [P] [US1] Create TipTap extension for bold/italic in packages/editor/src/extensions/text-styles.ts
-- [ ] T032 [P] [US1] Create TipTap extension for code blocks in packages/editor/src/extensions/code-block.ts
+- [X] T032 [P] [US1] Create TipTap extension for code blocks in packages/editor/src/extensions/code-block.ts
 - [ ] T033 [P] [US1] Create TipTap extension for image embeds with size validation in packages/editor/src/extensions/image-figure.ts
 - [ ] T034 [P] [US1] Create TipTap extension for video embeds with provider allowlist in packages/editor/src/extensions/video-embed.ts
 - [ ] T035 [US1] Create TipTap extension for appearance controls (font-size, left-padding) in packages/editor/src/extensions/appearance.ts
