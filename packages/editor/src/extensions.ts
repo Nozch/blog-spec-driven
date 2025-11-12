@@ -62,6 +62,47 @@ export const sanitizeUrl = (value?: string | null): string | null => {
   }
 };
 
+export const toEmbedUrl = (raw: string): string | null => {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return null;
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const pathSegments = parsed.pathname.split('/').filter(Boolean);
+  const buildYouTubeEmbed = (videoId?: string | null) =>
+    videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+
+  if (hostname === 'youtu.be') {
+    return buildYouTubeEmbed(pathSegments[0]);
+  }
+
+  if (hostname === 'youtube.com' || hostname === 'www.youtube.com' || hostname === 'm.youtube.com') {
+    if (pathSegments[0] === 'embed' && pathSegments[1]) {
+      return buildYouTubeEmbed(pathSegments[1]);
+    }
+    return buildYouTubeEmbed(parsed.searchParams.get('v'));
+  }
+
+  const buildVimeoEmbed = (videoId?: string | null) =>
+    videoId ? `https://player.vimeo.com/video/${videoId}` : null;
+
+  if (hostname === 'player.vimeo.com') {
+    if (pathSegments[0] === 'video' && pathSegments[1]) {
+      return buildVimeoEmbed(pathSegments[1]);
+    }
+    return buildVimeoEmbed(pathSegments[0]);
+  }
+
+  if (hostname === 'vimeo.com' || hostname === 'www.vimeo.com') {
+    return buildVimeoEmbed(pathSegments[0]);
+  }
+
+  return null;
+};
+
 const normalizeImageAttrs = (
   attrs: ImageEmbedAttributes
 ): (ImageEmbedAttributes & { width: number }) | null => {
@@ -88,9 +129,14 @@ export const normalizeVideoAttrs = (
     return null;
   }
 
+  const embedUrl = toEmbedUrl(src);
+  if (!embedUrl) {
+    return null;
+  }
+
   let provider: VideoProvider | undefined;
   try {
-    const { hostname } = new URL(src);
+    const { hostname } = new URL(embedUrl);
     provider = SUPPORTED_VIDEO_HOSTS[hostname];
   } catch {
     provider = undefined;
@@ -103,7 +149,7 @@ export const normalizeVideoAttrs = (
   const aspectRatio = attrs.aspectRatio && attrs.aspectRatio > 0 ? attrs.aspectRatio : DEFAULT_ASPECT_RATIO;
 
   return {
-    src,
+    src: embedUrl,
     title: attrs.title?.trim() ?? '',
     aspectRatio,
     provider
@@ -197,13 +243,19 @@ const VideoEmbed = Node.create({
     return [{ tag: 'figure[data-video-embed]' }];
   },
   renderHTML({ HTMLAttributes }) {
+    const rawSrc = typeof HTMLAttributes.src === 'string' ? HTMLAttributes.src : null;
+    const normalizedSrc = rawSrc ? toEmbedUrl(rawSrc) ?? rawSrc : null;
+    if (!normalizedSrc) {
+      return ['figure', { 'data-video-embed': 'true' }];
+    }
+
     return [
       'figure',
       { 'data-video-embed': 'true' },
       [
         'iframe',
         {
-          src: HTMLAttributes.src,
+          src: normalizedSrc,
           title: HTMLAttributes.title,
           allowfullscreen: 'true',
           'data-provider': HTMLAttributes.provider,
@@ -271,6 +323,7 @@ const AppearanceExtension = Extension.create({
         () =>
           applyUpdate(settings),
       resetAppearance:
+        () =>
         () => {
           const storage = extension.storage as AppearanceStorage;
           storage.appearance = { ...DEFAULT_APPEARANCE };

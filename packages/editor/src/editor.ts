@@ -44,8 +44,22 @@ export interface EditorSerializedState {
 
 export const createEditor = (options: CreateEditorOptions = {}): Editor => {
   const initialContent = options.tiptap ?? (options.mdx ? mdxToJSON(options.mdx) : undefined);
+  const editorOptions = options.editorOptions ?? {};
+  const userOnCreate = editorOptions.onCreate;
+  let hasSeededAppearance = false;
 
-  return new Editor({
+  const runAppearanceSeeding = (ctx: { editor: Editor }) => {
+    if (hasSeededAppearance) {
+      return;
+    }
+    hasSeededAppearance = true;
+    if (options.appearance) {
+      ctx.editor.commands.setAppearance(options.appearance);
+    }
+    userOnCreate?.(ctx);
+  };
+
+  const editor = new Editor({
     element: options.element,
     extensions: [
       StarterKit.configure({
@@ -55,13 +69,13 @@ export const createEditor = (options: CreateEditorOptions = {}): Editor => {
       ...createExtensionKit()
     ],
     content: initialContent,
-    onCreate: ({ editor }) => {
-      if (options.appearance) {
-        editor.commands.setAppearance(options.appearance);
-      }
-    },
-    ...(options.editorOptions ?? {})
+    ...editorOptions,
+    onCreate: runAppearanceSeeding
   });
+
+  runAppearanceSeeding({ editor });
+
+  return editor;
 };
 
 export const serializeEditorState = (editor: Editor): EditorSerializedState => {
@@ -87,13 +101,30 @@ const clampNumber = (value: number, range: { min: number; max: number }) =>
 
 type Block = JSONContent;
 
+type ListItemBuffer = {
+  lines: string[];
+  children: Block[];
+};
+
+type ListBuffer = {
+  ordered: boolean;
+  indent: number;
+  items: ListItemBuffer[];
+};
+
 const parseBlocks = (lines: string[]): Block[] => {
   const blocks: Block[] = [];
   let paragraphBuffer: string[] = [];
-  let listBuffer: { ordered: boolean; items: string[][] } | null = null;
+  const listStack: ListBuffer[] = [];
   let codeBuffer: string[] = [];
   let inCodeBlock = false;
   let codeLanguage = '';
+
+  const createListBuffer = (ordered: boolean, indent: number): ListBuffer => ({
+    ordered,
+    indent,
+    items: []
+  });
 
   const flushParagraph = () => {
     if (!paragraphBuffer.length) {
@@ -106,18 +137,78 @@ const parseBlocks = (lines: string[]): Block[] => {
     paragraphBuffer = [];
   };
 
-  const flushList = () => {
-    if (!listBuffer) {
+  const buildListBlock = (buffer: ListBuffer): Block => ({
+    type: buffer.ordered ? 'orderedList' : 'bulletList',
+    content: buffer.items.map((item) => {
+      const content: JSONContent[] = [];
+      const text = item.lines.join(' ').trim();
+      if (text) {
+        content.push(createParagraph(text));
+      }
+      content.push(...item.children);
+      return {
+        type: 'listItem',
+        content: content.length ? content : [createParagraph('')]
+      };
+    })
+  });
+
+  const appendListBlock = (block: Block) => {
+    if (listStack.length) {
+      const parent = listStack[listStack.length - 1];
+      if (!parent.items.length) {
+        parent.items.push({ lines: [], children: [] });
+      }
+      parent.items[parent.items.length - 1].children.push(block);
       return;
     }
-    blocks.push({
-      type: listBuffer.ordered ? 'orderedList' : 'bulletList',
-      content: listBuffer.items.map((itemLines) => ({
-        type: 'listItem',
-        content: [createParagraph(itemLines.join(' ').trim())]
-      }))
-    });
-    listBuffer = null;
+    blocks.push(block);
+  };
+
+  const flushListStack = (targetIndent = -1) => {
+    while (listStack.length && listStack[listStack.length - 1].indent > targetIndent) {
+      const completed = listStack.pop()!;
+      appendListBlock(buildListBlock(completed));
+    }
+  };
+
+  const ensureListContext = (indent: number, ordered: boolean): ListBuffer => {
+    while (listStack.length) {
+      const top = listStack[listStack.length - 1];
+      if (indent < top.indent || (indent === top.indent && top.ordered !== ordered)) {
+        const completed = listStack.pop()!;
+        appendListBlock(buildListBlock(completed));
+        continue;
+      }
+      break;
+    }
+
+    let current = listStack[listStack.length - 1];
+    if (!current || indent > current.indent) {
+      if (current && !current.items.length) {
+        current.items.push({ lines: [], children: [] });
+      }
+      const nestedBuffer = createListBuffer(ordered, indent);
+      listStack.push(nestedBuffer);
+      current = nestedBuffer;
+    } else if (!current || current.indent !== indent) {
+      const newBuffer = createListBuffer(ordered, indent);
+      listStack.push(newBuffer);
+      current = newBuffer;
+    }
+
+    if (current.ordered !== ordered) {
+      const newBuffer = createListBuffer(ordered, indent);
+      listStack.push(newBuffer);
+      current = newBuffer;
+    }
+
+    return current;
+  };
+
+  const handleListLine = (ordered: boolean, text: string, indent: number) => {
+    const buffer = ensureListContext(indent, ordered);
+    buffer.items.push({ lines: [text], children: [] });
   };
 
   const flushCode = () => {
@@ -142,23 +233,28 @@ const parseBlocks = (lines: string[]): Block[] => {
 
   const pushBlock = (block: Block) => {
     flushParagraph();
-    flushList();
+    flushListStack();
     blocks.push(block);
   };
 
+  const flushAllLists = () => {
+    flushListStack(-1);
+  };
+
   for (const rawLine of lines) {
+    const indent = rawLine.length - rawLine.trimStart().length;
     const line = rawLine.trim();
 
     if (line.startsWith('```')) {
       if (inCodeBlock) {
         flushParagraph();
-        flushList();
+        flushAllLists();
         inCodeBlock = false;
         flushCode();
         continue;
       }
       flushParagraph();
-      flushList();
+      flushAllLists();
       inCodeBlock = true;
       codeLanguage = line.slice(3).trim();
       continue;
@@ -171,7 +267,7 @@ const parseBlocks = (lines: string[]): Block[] => {
 
     if (!line) {
       flushParagraph();
-      flushList();
+      flushAllLists();
       continue;
     }
 
@@ -206,35 +302,26 @@ const parseBlocks = (lines: string[]): Block[] => {
 
     const bulletMatch = /^-\s+(.*)$/.exec(line);
     if (bulletMatch) {
-      if (!listBuffer) {
-        flushParagraph();
-        listBuffer = { ordered: false, items: [] };
-      } else if (listBuffer.ordered) {
-        flushList();
-        listBuffer = { ordered: false, items: [] };
-      }
-      listBuffer.items.push([bulletMatch[1]]);
+      flushParagraph();
+      handleListLine(false, bulletMatch[1], indent);
       continue;
     }
 
     const orderedMatch = /^(\d+)\.\s+(.*)$/.exec(line);
     if (orderedMatch) {
-      if (!listBuffer) {
-        flushParagraph();
-        listBuffer = { ordered: true, items: [] };
-      } else if (!listBuffer.ordered) {
-        flushList();
-        listBuffer = { ordered: true, items: [] };
-      }
-      listBuffer.items.push([orderedMatch[2]]);
+      flushParagraph();
+      handleListLine(true, orderedMatch[2], indent);
       continue;
     }
 
+    if (listStack.length) {
+      flushAllLists();
+    }
     paragraphBuffer.push(line);
   }
 
   flushParagraph();
-  flushList();
+  flushAllLists();
   flushCode();
 
   return blocks;
@@ -256,14 +343,9 @@ const serializeBlock = (node: Block): string => {
     case 'heading':
       return `${'#'.repeat(node.attrs?.level ?? 1)} ${serializeInline(node.content ?? [])}`;
     case 'bulletList':
-      return (node.content ?? [])
-        .map((item) => `- ${serializeInline(item.content?.[0]?.content ?? [])}`)
-        .join('\n');
-    case 'orderedList': {
-      return (node.content ?? [])
-        .map((item, index) => `${index + 1}. ${serializeInline(item.content?.[0]?.content ?? [])}`)
-        .join('\n');
-    }
+      return serializeList(node);
+    case 'orderedList':
+      return serializeList(node);
     case 'codeBlock': {
       const language = node.attrs?.language ?? '';
       const body = node.content?.[0]?.text ?? '';
@@ -285,6 +367,93 @@ const serializeBlock = (node: Block): string => {
     default:
       return '';
   }
+};
+
+const serializeList = (node: Block, depth = 0): string => {
+  const items = node.content ?? [];
+  const isOrdered = node.type === 'orderedList';
+  return items
+    .map((item, index) => serializeListItem(item, depth, isOrdered ? `${index + 1}. ` : '- '))
+    .filter(Boolean)
+    .join('\n');
+};
+
+const serializeListItem = (item: JSONContent, depth: number, marker: string): string => {
+  const indent = '  '.repeat(depth);
+  const continuationIndent = `${indent}  `;
+  const lines: string[] = [];
+  let hasMarkerLine = false;
+
+  const appendLines = (contentLines: string[], options?: { preserveIndent?: boolean }) => {
+    if (!contentLines.length) {
+      return;
+    }
+    const preserveIndent = options?.preserveIndent ?? false;
+
+    if (!hasMarkerLine) {
+      if (preserveIndent) {
+        lines.push(`${indent}${marker}`.trimEnd());
+        hasMarkerLine = true;
+      } else {
+        const [first, ...rest] = contentLines;
+        lines.push(`${indent}${marker}${first}`);
+        rest.forEach((line) => lines.push(`${continuationIndent}${line}`));
+        hasMarkerLine = true;
+        return;
+      }
+    }
+
+    if (preserveIndent) {
+      lines.push(...contentLines);
+      return;
+    }
+
+    contentLines.forEach((line) => {
+      lines.push(`${continuationIndent}${line}`);
+    });
+  };
+
+  const ensureMarkerLine = () => {
+    if (!hasMarkerLine) {
+      lines.push(`${indent}${marker}`.trimEnd());
+      hasMarkerLine = true;
+    }
+  };
+
+  for (const child of item.content ?? []) {
+    if (!child) {
+      continue;
+    }
+
+    if (child.type === 'paragraph') {
+      const text = serializeInline(child.content ?? []);
+      if (!/\S/.test(text)) {
+        continue;
+      }
+      appendLines(text.split('\n'));
+      continue;
+    }
+
+    if (child.type === 'bulletList' || child.type === 'orderedList') {
+      const nested = serializeList(child, depth + 1);
+      if (nested) {
+        ensureMarkerLine();
+        appendLines(nested.split('\n'), { preserveIndent: true });
+      }
+      continue;
+    }
+
+    const serialized = serializeBlock(child);
+    if (serialized && /\S/.test(serialized)) {
+      appendLines(serialized.split('\n'));
+    }
+  }
+
+  if (!hasMarkerLine) {
+    lines.push(`${indent}${marker}`.trimEnd());
+  }
+
+  return lines.join('\n');
 };
 
 const inlinePattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
@@ -385,10 +554,11 @@ function parseComponent(line: string, component: 'ImageFigure' | 'VideoEmbed') {
     return null;
   }
 
-  const attrPattern = /(\w+)=(?:"([^"]*)"|{([^}]+)})/g;
+  const attrPattern = /(\w+)=(?:"((?:\\.|[^"])*)"|'((?:\\.|[^'])*)'|{([^}]+)})/g;
+  const unescapeAttrValue = (value: string): string => value.replace(/\\(['"\\])/g, '$1');
   const attrs: ImageFigureAttrs = Object.create(null);
   for (const match of line.matchAll(attrPattern)) {
-    const [, key, quoted, braced] = match;
+    const [, key, doubleQuoted, singleQuoted, braced] = match;
     if (braced) {
       try {
         attrs[key] = JSON.parse(braced);
@@ -396,7 +566,8 @@ function parseComponent(line: string, component: 'ImageFigure' | 'VideoEmbed') {
         // ignore invalid JSON; leave undefined
       }
     } else {
-      attrs[key] = quoted ?? '';
+      const raw = doubleQuoted ?? singleQuoted ?? '';
+      attrs[key] = unescapeAttrValue(raw);
     }
   }
 

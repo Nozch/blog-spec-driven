@@ -13,9 +13,12 @@ supabase/.temp/*
 # Terraform plan files
 *.tfplan
 
-# pnpm
+# pnpm & local caches
 **/node_modules/
+# Vite/Vitest cache directories sometimes land inside node_modules, keep them out explicitly
 **/.vite/
+**/.vite/**
+**/vitest/
 
 # TypeScript build related files
 **/dist/
