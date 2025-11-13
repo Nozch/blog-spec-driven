@@ -2,6 +2,7 @@ import { Extension, Node, mergeAttributes, type Editor } from '@tiptap/core';
 import Heading from '@tiptap/extension-heading';
 import Image from '@tiptap/extension-image';
 import { TextStylesExtension } from './extensions/text-styles';
+import { CodeBlockExtension } from './extensions/code-block';
 
 export type AppearanceSettings = {
   fontSize: number;
@@ -337,6 +338,7 @@ const AppearanceExtension = Extension.create({
 export const createExtensionKit = (): Extension[] => [
   Heading.configure({ levels: [1, 2, 3, 4] }),
   TextStylesExtension,
+  CodeBlockExtension,  // T032: Code blocks with syntax highlighting
   ImageFigure,
   VideoEmbed,
   AppearanceExtension

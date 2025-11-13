@@ -63,8 +63,11 @@ export const createEditor = (options: CreateEditorOptions = {}): Editor => {
     element: options.element,
     extensions: [
       StarterKit.configure({
-        heading: false,
-        image: false
+        heading: false,   // Using custom HeadingExtension (T030)
+        image: false,     // Using custom ImageFigure (T033)
+        codeBlock: false, // Using custom CodeBlockExtension (T032)
+        bold: false,      // Using custom TextStylesExtension for bold (T031)
+        italic: false     // Using custom TextStylesExtension for italic (T031)
       }),
       ...createExtensionKit()
     ],
