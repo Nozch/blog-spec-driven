@@ -14,8 +14,8 @@
 - [ ] CHK002 Do draft privacy requirements (FR-004, Edge Case "Draft Access Beyond Author") specify who besides the author may access drafts, how escalations are logged, and what audit evidence is required?
   **✗ INCOMPLETE**: FR-004 states "accessible only to the author" but Outstanding Ambiguities explicitly flags "Draft Access Beyond Author" as unresolved. Admin/support access scenarios and escalation logging are undefined.
 
-- [ ] CHK003 Is the persistence contract for appearance settings (FR-009, Tasks T015–T019) explicit about preview vs. published rendering parity and failure behavior if settings are missing or invalid?
-  **✗ INCOMPLETE**: FR-009 requires persistence, openapi.yaml includes appearance in request/response schemas, but no explicit statement about preview vs published rendering parity or graceful degradation when settings are invalid/missing.
+- [X] CHK003 Is the persistence contract for appearance settings (FR-009, Tasks T015–T019) explicit about preview vs. published rendering parity and failure behavior if settings are missing or invalid?
+  **✓ COMPLETE**: FR-009 requires persistence. openapi.yaml:180-190 defines appearance as separate object with fontSize (14-24px) and leftPadding (0-64px). data-model.md:14 stores appearance as separate jsonb field. editor.ts:84-91 shows `serializeEditorState()` returns three separate pieces: `tiptap` (JSON), `mdx` (content), and `appearance` (settings) - confirming appearance is NOT embedded in MDX serialization. editor.ts:621-624 shows `mergeAppearance()` provides graceful fallback to DEFAULT_APPEARANCE when settings are missing/invalid. T037 (MDX serializer) handles content only; appearance persistence is independent.
 
 ## Import & Asset Validation
 
