@@ -16,6 +16,7 @@
 ## Path Conventions
 
 Based on plan.md, this is a web monorepo with:
+
 - `apps/web/` - Next.js 14 front-end + API routes
 - `packages/` - Shared packages (editor, importer, scheduler-sdk)
 - `services/publisher/` - Background worker
@@ -78,10 +79,10 @@ Based on plan.md, this is a web monorepo with:
 
 ### Implementation for User Story 1
 
-- [X] T030 [P] [US1] Create TipTap extension for headings in packages/editor/src/extensions/heading.ts
-- [X] T031 [P] [US1] Create TipTap extension for bold/italic in packages/editor/src/extensions/text-styles.ts
-- [X] T032 [P] [US1] Create TipTap extension for code blocks in packages/editor/src/extensions/code-block.ts
-- [ ] T033 [P] [US1] Create TipTap extension for image embeds with size validation in packages/editor/src/extensions/image-figure.ts
+- [x] T030 [P] [US1] Create TipTap extension for headings in packages/editor/src/extensions/heading.ts
+- [x] T031 [P] [US1] Create TipTap extension for bold/italic in packages/editor/src/extensions/text-styles.ts
+- [x] T032 [P] [US1] Create TipTap extension for code blocks in packages/editor/src/extensions/code-block.ts
+- [x] T033 [P] [US1] Create TipTap extension for image embeds with size validation in packages/editor/src/extensions/image-figure.ts
 - [ ] T034 [P] [US1] Create TipTap extension for video embeds with provider allowlist in packages/editor/src/extensions/video-embed.ts
 - [ ] T035 [US1] Create TipTap extension for appearance controls (font-size, left-padding) in packages/editor/src/extensions/appearance.ts
 - [ ] T036 [US1] Implement TipTap editor factory with all extensions in packages/editor/src/editor-factory.ts
@@ -227,6 +228,7 @@ Based on plan.md, this is a web monorepo with:
 ### Within Each User Story
 
 **User Story 1 (Compose):**
+
 - TipTap extensions (T030-T034) can run in parallel
 - T035 depends on T030-T034
 - T036 depends on T030-T035
@@ -238,6 +240,7 @@ Based on plan.md, this is a web monorepo with:
 - T048 depends on T039-T041, T046-T047
 
 **User Story 2 (Import):**
+
 - Validators (T050-T052) can run in parallel
 - T053 depends on T050-T052
 - T054-T055 depend on T053
@@ -247,6 +250,7 @@ Based on plan.md, this is a web monorepo with:
 - T060-T062 depend on previous tasks
 
 **User Story 3 (Schedule):**
+
 - Utilities/Validators (T063-T065) can run in parallel
 - UI components (T066-T067) can run in parallel
 - T068-T069 depend on T063-T065
@@ -259,27 +263,33 @@ Based on plan.md, this is a web monorepo with:
 All tasks T003-T011 can run in parallel after T001-T002
 
 **Phase 2 (Foundational):**
+
 - Database migrations (T013-T016) can run in parallel after T012
 - Terraform configs (T018-T020) can run in parallel
 - Library setup (T021-T029) can run in parallel
 
 **Phase 3 (User Story 1):**
+
 - TipTap extensions (T030-T034) can run in parallel
 - UI components (T039-T041) can run in parallel after T036
 
 **Phase 4 (User Story 2):**
+
 - Validators (T050-T052) can run in parallel
 - UI components (T056-T057) can run in parallel
 
 **Phase 5 (User Story 3):**
+
 - Utilities/Validators (T063-T065) can run in parallel
 - UI components (T066-T067) can run in parallel
 
 **Phase 6 (Category Navigation):**
+
 - T083-T084 can run in parallel
 - Category page routes (T089-T091) can run in parallel after T088
 
 **Phase 7 (Polish):**
+
 - Most tasks (T096-T101, T104-T106, T110) can run in parallel
 
 ---
@@ -355,6 +365,7 @@ With multiple developers:
 ## Task Summary
 
 **Total Tasks**: 110
+
 - Phase 1 (Setup): 11 tasks (all complete ✓)
 - Phase 2 (Foundational): 18 tasks (all complete ✓)
 - Phase 3 (User Story 1): 20 tasks
@@ -364,6 +375,7 @@ With multiple developers:
 - Phase 7 (Polish): 15 tasks
 
 **Tasks by User Story**:
+
 - User Story 1 (Compose): 20 tasks
 - User Story 2 (Import): 13 tasks
 - User Story 3 (Schedule): 20 tasks
@@ -373,6 +385,7 @@ With multiple developers:
 **Parallel Opportunities**: 45 tasks marked [P] can run in parallel within their phase
 
 **MVP Scope** (Recommended): Phases 1-4 (User Stories 1 & 2) = 62 tasks
+
 - Enables compose and import workflows
 - All foundational infrastructure in place
 - Independent test criteria met for US1 and US2

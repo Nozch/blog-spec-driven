@@ -12,9 +12,11 @@
 ### Session 2025-11-07
 - Q: How many articles should each category page list per pagination step? → A: 12 posts per page
 
-## Outstanding Ambiguities
+### Session 2025-11-12
+- Q: What specific UX pattern and message copy should be used for file size warnings when uploads exceed 8 MB? → A: Inline toast notification with dismissible close button, displaying: "Upload blocked: `[filename]` is [size] MB. Files must be ≤8 MB. See [docs/blog/import-limits] for guidance." Toast stays visible for 10 seconds or until dismissed.
+- Q: What email template and sender identity should be used for publish failure notifications? → A: Structured/actionable format with Subject: "Publish failed: [Article Title]" and Body: "Article: [title] | Scheduled: [JST time] | Failure: [reason]. Action: Visit [direct_link] to review and republish. If issue persists, contact support." Sender: publishing@blog.example.com
 
-- **FR-012 / FR-013 Messaging**: File-size warning copy and failure email template remain `[NEEDS CLARIFICATION]`; final wording + timing are required.
+## Outstanding Ambiguities
 - **Draft Access Beyond Author**: Draft privacy (FR-004) assumes single-author access but does not state whether admins/support can view drafts or how escalations work.
 - **Scheduling Precision Edge Cases**: Minute-level JST scheduling lacks guidance for edge cases (e.g., DST—not observed—and sub-minute submissions); call out whether these are in or out of scope.
 - **Auto Tag Fallback Rules**: Define how tag suggestions behave for very short or multilingual drafts so manual-only workflows are well understood.
@@ -126,11 +128,8 @@ A blogger saves private drafts online, schedules publication in JST with minute 
 - **FR-009**: Article appearance controls MUST persist font size and left padding settings per article.
 - **FR-010**: System MUST prompt users to confirm/revise schedule whenever they edit content on a scheduled-but-unpublished article and must log that notification.
 - **FR-011**: Category pagination MUST show 12 posts per page across Music/Movie/Tech/Blog lists.
-
-*Unclear requirements to resolve during planning:*
-
-- **FR-012**: File size warning copy specifics and UX details [NEEDS CLARIFICATION: message tone & link to docs].
-- **FR-013**: Email notification template and sender identity [NEEDS CLARIFICATION].
+- **FR-012**: System MUST display an inline toast notification when file size exceeds 8 MB, showing: "Upload blocked: `[filename]` is [actual_size] MB. Files must be ≤8 MB. See docs/blog/import-limits for guidance." Toast remains visible for 10 seconds or until user dismisses it.
+- **FR-013**: System MUST send email notification for publish failures with Subject: "Publish failed: [Article Title]" and Body: "Article: [title] | Scheduled: [JST time] | Failure: [reason]. Action: Visit [direct_link] to review and republish. If issue persists, contact support." Sender identity: publishing@blog.example.com
 
 ### Key Entities
 
