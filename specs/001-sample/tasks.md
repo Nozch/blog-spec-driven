@@ -83,7 +83,7 @@ Based on plan.md, this is a web monorepo with:
 - [x] T031 [P] [US1] Create TipTap extension for bold/italic in packages/editor/src/extensions/text-styles.ts
 - [x] T032 [P] [US1] Create TipTap extension for code blocks in packages/editor/src/extensions/code-block.ts
 - [x] T033 [P] [US1] Create TipTap extension for image embeds with size validation in packages/editor/src/extensions/image-figure.ts
-- [ ] T034 [P] [US1] Create TipTap extension for video embeds with provider allowlist in packages/editor/src/extensions/video-embed.ts
+- [x] T034 [P] [US1] Create TipTap extension for video embeds with provider allowlist in packages/editor/src/extensions/video-embed.ts
 - [ ] T035 [US1] Create TipTap extension for appearance controls (font-size, left-padding) in packages/editor/src/extensions/appearance.ts
 - [ ] T036 [US1] Implement TipTap editor factory with all extensions in packages/editor/src/editor-factory.ts
 - [ ] T037 [US1] Implement TipTap to MDX serializer in packages/editor/src/serializers/mdx-serializer.ts

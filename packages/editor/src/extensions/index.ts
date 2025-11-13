@@ -9,7 +9,7 @@
  * - T031: Text styles (bold/italic) ✓
  * - T032: Code blocks ✓
  * - T033: Image embeds with size validation ✓
- * - T034: Video embeds - TODO
+ * - T034: Video embeds with provider allowlist ✓
  * - T035: Appearance controls - TODO
  */
 
@@ -21,3 +21,7 @@ export {
   type ImageOptions,
   type ImageEmbedAttributes
 } from './image-figure';
+export {
+  VideoEmbedExtension,
+  type VideoEmbedAttributes
+} from './video-embed';
