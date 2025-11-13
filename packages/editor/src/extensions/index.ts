@@ -10,7 +10,7 @@
  * - T032: Code blocks ✓
  * - T033: Image embeds with size validation ✓
  * - T034: Video embeds with provider allowlist ✓
- * - T035: Appearance controls - TODO
+ * - T035: Appearance controls (font-size, left-padding) ✓
  */
 
 export { HeadingExtension, type HeadingLevel } from './heading';
@@ -25,3 +25,8 @@ export {
   VideoEmbedExtension,
   type VideoEmbedAttributes
 } from './video-embed';
+export {
+  AppearanceExtension,
+  type AppearanceSettings,
+  APPEARANCE_CONSTRAINTS
+} from './appearance';
