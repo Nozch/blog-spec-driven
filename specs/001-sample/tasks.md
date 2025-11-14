@@ -90,7 +90,7 @@ Based on plan.md, this is a web monorepo with:
 - [x] T038 [US1] Implement MDX to TipTap JSON parser in packages/editor/src/parsers/mdx-parser.ts
 - [x] T039 [P] [US1] Create editor React component in apps/web/components/editor/editor.tsx
 - [x] T040 [P] [US1] Create appearance controls UI component in apps/web/components/editor/appearance-controls.tsx
-- [ ] T041 [P] [US1] Create tag editor UI component with editable suggestions in apps/web/components/editor/tag-editor.tsx
+- [x] T041 [P] [US1] Create tag editor UI component with editable suggestions in apps/web/components/editor/tag-editor.tsx
 - [ ] T042 [US1] Implement OpenSearch keyword extraction Lambda in services/tag-extractor/index.ts
 - [ ] T043 [US1] Create POST /api/articles/[articleId]/tags/suggest route handler in apps/web/app/api/articles/[articleId]/tags/suggest/route.ts
 - [ ] T044 [US1] Create POST /api/articles route handler for composing articles in apps/web/app/api/articles/route.ts
