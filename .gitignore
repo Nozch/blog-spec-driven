@@ -1,4 +1,11 @@
+# AI agent files
 .codex
+.claude
+.specify/memory/*.md
+.specify/templates/*.md
+
+
+# Supabase temp files
 supabase/.temp/*
 
 # Terraform local state
@@ -24,3 +31,6 @@ supabase/.temp/*
 **/dist/
 **/*.tsbuildinfo
 pnpm-debug.log
+
+# Next build
+**/.next
