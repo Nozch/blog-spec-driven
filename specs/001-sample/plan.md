@@ -1,37 +1,79 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Personal Blog Publishing Flow
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `001-t042-tag-extractor` | **Date**: 2025-11-14 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/001-sample/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+This feature enables individual bloggers to publish and manage posts with fast category navigation, dual authoring modes (in-browser editor + Markdown/MDX import), appearance controls, auto tag suggestions, and scheduling. The tag auto-suggestion component uses a hybrid backend approach combining OpenSearch keyword extraction with a lightweight semantic ranking model to generate up to 5 relevance-ranked tag suggestions within 3 seconds when the user clicks a "Suggest Tags" button.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript 5.6
+**Primary Dependencies**: React 18, Next.js 14 (App Router), TipTap 2 (editor), Contentlayer/MDX bundler, AWS SDK v3, BullMQ + Redis (scheduling), OpenSearch (keyword extraction), Model2Vec (semantic ranking)
+**Storage**: PostgreSQL via Supabase (managed, with row-level security, JSONB support, encryption at rest)
+**Testing**: Vitest + React Testing Library (unit/integration/component), Playwright (E2E), MSW (API mocking), k6 + Lighthouse CI (performance)
+**Target Platform**: Web (browser + Node.js server)
+**Project Type**: Web application (frontend + backend)
+**Performance Goals**:
+- Top page first paint < 1s (95th percentile)
+- Tag suggestion generation ≤ 3s (95th percentile)
+- Import render ≤ 5s (95th percentile)
+- Category page load < 2s
+**Constraints**:
+- File size limit: 8 MB for uploads
+- Drafts encrypted at rest and in transit
+- JST timezone for scheduling with minute precision
+- Manual trigger for tag suggestions (user control)
+**Scale/Scope**:
+- Single-author blog platform
+- 4 categories (Music, Movie, Tech, Blog)
+- 12 posts per pagination page
+- Up to 5 tag suggestions per article
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+### P1: Specification-First Source of Truth ✅ PASS
+- ✅ Spec defines 3 independent user stories with priorities (P1, P2)
+- ✅ Measurable success criteria specified (SC-001 through SC-006)
+- ✅ Edge cases documented in dedicated section
+- ✅ All clarifications resolved via /speckit.clarify (Session 2025-11-14)
+- ✅ Spec references: spec.md is authoritative, this plan traces back to it
+
+### P2: Independent Value Slices ✅ PASS
+- ✅ User Story 1 (Compose & Edit In-Browser) - P1, independently testable
+- ✅ User Story 2 (Import Markdown/MDX) - P1, independently testable
+- ✅ User Story 3 (Draft, Schedule, Publish Control) - P2, independently testable
+- ✅ Each story has "Independent Test" criterion
+- ✅ Shared infrastructure identified: TipTap editor, Article entity, draft storage, OpenSearch + model integration (Foundational phase required)
+- ✅ No blocking cross-story dependencies beyond foundational infrastructure
+
+### P3: Evidence-Driven Development ✅ PASS
+- ✅ Test strategy: NEEDS CLARIFICATION (will be resolved in Phase 0 research)
+- ✅ Success criteria are measurable (latency targets, percentiles, success rates)
+- ✅ Observability documented: OR-001 (logging), OR-002 (metrics)
+- ✅ Performance targets: <1s first paint, ≤3s tag suggestions, ≤5s import render
+- ⚠️ Load testing methodology not yet specified (will document in Phase 0)
+
+### P4: Plan-to-Code Traceability ✅ PASS
+- ✅ Repository layout will be mapped in Project Structure section below
+- ✅ Phase 1 will generate data-model.md, contracts/, quickstart.md with exact paths
+- ✅ Tasks.md (generated by /speckit.tasks) will include file paths per requirement
+- ✅ Spec requirements map to plan sections (e.g., FR-003 → tag suggestion design)
+
+### P5: Operational Simplicity & Observability ✅ PASS
+- ✅ Performance targets in SC-001 through SC-005 with percentile measurements
+- ✅ Logging requirements: OR-001 (editor actions, validation, publish jobs, tag suggestions)
+- ✅ Metrics requirements: OR-002 (first_paint_ms, tag_suggestion.latency_ms, etc.)
+- ✅ Rollback documented: OR-003 (feature flags, DB migration reversals)
+- ✅ Failure notifications: FR-006 (email on publish failure), FR-014 (toast on tag failure)
+- ✅ Infrastructure: BullMQ + Redis for scheduling, OpenSearch for keywords (existing stack)
+
+**Status**: ✅ ALL GATES PASS - Proceeding to Phase 0 research
 
 ## Project Structure
 
@@ -48,57 +90,91 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
 ├── src/
 │   ├── models/
+│   │   ├── Article.ts          # Article entity with tags, status, appearance
+│   │   ├── DraftStorage.ts     # Draft encryption and storage
+│   │   └── PublishJob.ts       # Scheduling and publish job tracking
 │   ├── services/
-│   └── api/
+│   │   ├── tagSuggestion/
+│   │   │   ├── opensearch.ts   # OpenSearch keyword extraction
+│   │   │   ├── semanticRanker.ts  # Lightweight model for semantic ranking
+│   │   │   └── tagSuggestionService.ts  # Orchestrates hybrid approach
+│   │   ├── articleService.ts   # Article CRUD, import validation
+│   │   ├── draftService.ts     # Draft encryption, storage, retrieval
+│   │   ├── schedulingService.ts # BullMQ job scheduling
+│   │   └── notificationService.ts # Email notifications
+│   ├── api/
+│   │   ├── routes/
+│   │   │   ├── articles.ts     # Article CRUD endpoints
+│   │   │   ├── drafts.ts       # Draft management
+│   │   │   ├── tags.ts         # Tag suggestion endpoint
+│   │   │   └── publish.ts      # Scheduling and publish control
+│   │   └── middleware/
+│   │       ├── auth.ts         # Author-only access control
+│   │       └── validation.ts   # File size, format validation
+│   └── workers/
+│       └── publishWorker.ts    # BullMQ worker for scheduled publishing
 └── tests/
+    ├── contract/               # OpenAPI contract tests
+    ├── integration/            # API + service integration tests
+    └── unit/                   # Service and model unit tests
 
 frontend/
 ├── src/
 │   ├── components/
+│   │   ├── editor/
+│   │   │   ├── TipTapEditor.tsx     # Main editor component
+│   │   │   ├── AppearanceControls.tsx  # Font size, padding controls
+│   │   │   ├── TagEditor.tsx        # Tag UI with "Suggest Tags" button
+│   │   │   └── FormatToolbar.tsx    # Headings, bold, italic, etc.
+│   │   ├── import/
+│   │   │   ├── FileUpload.tsx       # MD/MDX upload with validation
+│   │   │   └── ImportToast.tsx      # Size warning toast
+│   │   ├── scheduling/
+│   │   │   ├── SchedulePicker.tsx   # JST datetime picker
+│   │   │   └── SchedulePrompt.tsx   # Edit confirmation prompt
+│   │   └── category/
+│   │       └── CategoryPagination.tsx # 12 posts per page
 │   ├── pages/
+│   │   ├── editor/
+│   │   │   └── [id].tsx         # Article editor page
+│   │   ├── categories/
+│   │   │   └── [category].tsx   # Category listing pages
+│   │   └── api/
+│   │       └── [Next.js API routes if using Next.js API routes]
 │   └── services/
+│       ├── articleApi.ts        # Frontend API client
+│       ├── tagApi.ts            # Tag suggestion API client
+│       └── draftSync.ts         # Auto-save and local buffer
 └── tests/
+    ├── components/              # React component tests
+    └── e2e/                     # End-to-end user story tests
 
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+infra/
+├── terraform/                   # Infrastructure as Code
+│   ├── feature-flags.tf
+│   ├── redis-publisher.tf
+│   └── s3-drafts.tf
+├── opensearch/
+│   └── keyword-extraction.yml   # OpenSearch index config
+├── redis/
+│   └── bullmq-config.ts         # BullMQ queue setup
+└── aws/
+    └── lambda/
+        └── tag-ranker/          # Lightweight semantic ranking lambda
+            ├── handler.ts
+            ├── opensearch-client.ts
+            └── model/           # Pre-trained lightweight model
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Web application structure (frontend + backend) selected based on Next.js 14 App Router architecture. Frontend uses React 18 with TipTap 2 editor integration. Backend provides REST API with Next.js API routes (or standalone Express if needed). Tag suggestion infrastructure includes OpenSearch for keyword extraction and AWS Lambda for semantic ranking to meet the 3-second latency target. BullMQ + Redis handle scheduled publishing. Tests organized by type (contract, integration, unit, component, e2e) per P3 Evidence-Driven Development.
 
 ## Complexity Tracking
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+**Status**: No violations - Constitution Check passed all gates. No complexity justifications required.

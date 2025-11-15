@@ -31,6 +31,58 @@
 - **Alternatives considered**: Modal dialog (too disruptive); silent form validation (users miss reason); server-only error (slower feedback).
 
 ## 7. Failure Email Template (FR-012)
-- **Decision**: Send via AWS SES from `notify@blog.example.com` with subject “Publish failed for <article title>”. Body includes failure reason, last attempted schedule time, CTA button linking back to the editor with `?articleId=...&reschedule=true`, and a note that another attempt will run once the user confirms.
+- **Decision**: Send via AWS SES from `notify@blog.example.com` with subject "Publish failed for <article title>". Body includes failure reason, last attempted schedule time, CTA button linking back to the editor with `?articleId=...&reschedule=true`, and a note that another attempt will run once the user confirms.
 - **Rationale**: Clear sender identity improves deliverability, consistent copy speeds debugging, and the deep link reduces recovery time.
 - **Alternatives considered**: In-app notifications only (violates requirement); SMS (extra infra); sending from default AWS address (hurts trust/deliverability).
+
+## 8. Database Selection (Updated 2025-11-14)
+- **Decision**: PostgreSQL via Supabase (managed service)
+- **Rationale**: PostgreSQL via Supabase is optimal for this single-author blog platform. It natively supports all required features: JSONB for TipTap document storage and appearance settings, array types for tags, row-level security for draft encryption enforcement, and TIMESTAMP WITH TIME ZONE for precise JST scheduling. Supabase provides managed Postgres with built-in auth integration, automatic SSL/TLS encryption in transit, and straightforward Next.js SDK integration. For a single-author blog with low write volume, the free tier handles all requirements while providing excellent query performance for category pagination (indexed queries on category + published_at columns easily achieve sub-100ms response times).
+- **Alternatives considered**:
+  - **DynamoDB**: Rejected due to complexity of single-table design pattern for category pagination queries and unnecessary eventual consistency model for single-author use case.
+  - **MongoDB/DocumentDB**: Rejected due to poor fit with relational data model (Article 1:N PublishJob relationships benefit from foreign keys and transactions) and lack of row-level security features critical for draft privacy (FR-004).
+- **Implementation Notes**:
+  - Encryption: Supabase's built-in AES-256 encryption at rest; draft content blobs in S3 use SSE-S3 encryption
+  - Schema: JSONB columns for `body_tiptap` and `appearance`, TEXT[] for tags with GIN index, composite index on (category, status, published_at DESC)
+  - Performance: Connection pooling via pgBouncer, materialized views for CategoryPageCache
+  - Deployment: Supabase project in ap-northeast-1 (Tokyo) region for JST scheduling latency optimization
+
+## 9. Testing Framework (Updated 2025-11-14)
+- **Decision**: Vitest + React Testing Library + Playwright + MSW + k6 + Lighthouse CI
+- **Rationale**: This stack builds on the existing Vitest infrastructure (already in use for unit tests), provides seamless Next.js 14 App Router support, excellent TypeScript integration, and covers all required testing layers from P3 Evidence-Driven Development. Vitest offers faster execution than Jest for large TypeScript codebases, while Playwright has overtaken Cypress in 2025 with superior cross-browser support and Microsoft backing for long-term stability.
+- **Alternatives considered**:
+  - **Jest + Cypress**: Rejected due to slower execution compared to Vitest and Cypress limitations with multi-tab/cross-origin testing
+  - **Pact for contract testing**: Rejected in favor of OpenAPI + TypeScript validation (simpler for monorepo setup)
+  - **Artillery instead of k6**: Rejected because k6 has better TypeScript support and superior Grafana integration
+- **Testing Strategy**:
+  - **Unit Tests**: Vitest (TipTap extensions, scheduler SDK validation, MDX/TipTap JSON serialization)
+  - **Integration Tests**: Vitest + MSW (React components with API interactions, scheduling logic with mocked BullMQ queues, file upload validation, tag suggestion API with 3s timeout handling)
+  - **Component Tests**: Vitest + React Testing Library + @testing-library/user-event (Editor interactions, TagEditor UI, AppearanceControls sliders)
+  - **Contract Tests**: OpenAPI schemas + Zod validation + TypeScript (API contract definitions in scheduler-sdk package)
+  - **E2E Tests**: Playwright (complete user flows, draft encryption/decryption, TipTap editor toolbar, cross-browser testing)
+  - **Performance Tests**: k6 + Lighthouse CI (load testing for tag suggestions, concurrent saves, BullMQ job processing; automated performance monitoring for <1s first paint, Core Web Vitals, 5s import render)
+- **Coverage Targets**: >80% unit test coverage for business logic, all API endpoints and critical paths for integration tests, primary user journeys for E2E tests, all SLO metrics from spec for performance tests
+
+## 10. Semantic Ranking Model for Tag Suggestions (Updated 2025-11-14)
+- **Decision**: Model2Vec distilled from all-MiniLM-L6-v2
+- **Rationale**: Model2Vec offers the optimal balance for Lambda deployment by providing 500x faster CPU inference than sentence transformers while maintaining 95%+ accuracy. With a model size of ~8-30MB and inference speeds measured in single-digit milliseconds, it easily fits within the 3-second total latency budget (OpenSearch ~500ms leaves ~1.5-2s for model inference + network overhead). The distillation process converts the transformer into static embeddings (simple dictionary lookups + averaging), eliminating the compute-intensive encoder bottleneck while preserving semantic understanding sufficient for tag relevance ranking.
+- **Alternatives considered**:
+  - **all-MiniLM-L6-v2 with ONNX Runtime**: Good performance (~50 sentences/sec, 14.7ms per 1K tokens) but still requires 200-400ms for typical article processing. Rejected because Model2Vec offers 10-20x better latency with minimal accuracy trade-off.
+  - **TF-IDF + Cosine Similarity**: Extremely fast (sub-10ms) but lacks semantic understanding—cannot capture synonyms, context, or meaning. Rejected due to poor quality results for tag ranking.
+  - **DistilBERT-base**: 40% smaller than BERT, 60% faster inference, retains 97% performance. Rejected due to larger model size (~207MB) increasing cold start times and 10-50x slower inference than Model2Vec.
+- **Expected Latency**:
+  - Model loading (cold start): ~500-800ms (one-time per Lambda instance)
+  - Inference per article: ~5-20ms for typical blog post (1-5K tokens)
+  - OpenSearch keyword extraction: ~500ms
+  - Network overhead: ~200-300ms (API Gateway + Lambda invocation)
+  - **Total end-to-end**: ~1.2-1.8s (well under 3s requirement with 40-60% margin)
+  - Warm invocations: <800ms total (model already loaded)
+- **Fallback Strategy**:
+  - Timeout (>3s): Return raw OpenSearch keywords unranked with warning toast per FR-014
+  - Model load failure: Fall back to OpenSearch-only mode, log error to CloudWatch
+  - Inference error: Return top 5 OpenSearch keywords by frequency score with `ranked: false` flag
+  - Empty/invalid input: Return empty array with "Add tags manually" message per spec
+  - Graceful degradation: Tag input field remains enabled (per FR-014)
+  - Monitoring: Track `tag_suggestion.latency_ms` and `tag_suggestion.success_rate` metrics (per OR-002)
+- **Lambda Configuration**: 512-1024MB memory, 5s timeout, 1GB /tmp for model caching, Python 3.11+ with arm64 architecture
+- **Hybrid Scoring**: Combine Model2Vec semantic scores with OpenSearch frequency scores using weighted fusion (70% semantic, 30% frequency)
