@@ -5,6 +5,8 @@
 
 **Tests**: Tests are NOT explicitly requested in the feature specification, so test tasks are omitted per guidelines.
 
+**Last Updated**: 2025-11-14 - Updated tag suggestion tasks (T042-T047) to reflect Model2Vec semantic ranking model decision from research.md
+
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -91,14 +93,18 @@ Based on plan.md, this is a web monorepo with:
 - [x] T039 [P] [US1] Create editor React component in apps/web/components/editor/editor.tsx
 - [x] T040 [P] [US1] Create appearance controls UI component in apps/web/components/editor/appearance-controls.tsx
 - [x] T041 [P] [US1] Create tag editor UI component with editable suggestions in apps/web/components/editor/tag-editor.tsx
-- [ ] T042 [US1] Implement OpenSearch keyword extraction Lambda in services/tag-extractor/index.ts
-- [ ] T043 [US1] Create POST /api/articles/[articleId]/tags/suggest route handler in apps/web/app/api/articles/[articleId]/tags/suggest/route.ts
-- [ ] T044 [US1] Create POST /api/articles route handler for composing articles in apps/web/app/api/articles/route.ts
-- [ ] T045 [US1] Implement draft storage logic with S3 encryption in apps/web/lib/draft-storage.ts
-- [ ] T046 [US1] Integrate draft auto-save in editor component in apps/web/components/editor/editor.tsx
-- [ ] T047 [US1] Create editor page route in apps/web/app/(editor)/compose/page.tsx
-- [ ] T048 [US1] Add validation for appearance settings (14-24px font, 0-64px padding) in apps/web/lib/validators/appearance.ts
-- [ ] T049 [US1] Add logging for compose/edit actions with author_id and article_id in apps/web/app/api/articles/route.ts
+- [x] T042 [P] [US1] Implement OpenSearch keyword extraction client in infra/aws/lambda/tag-ranker/opensearch-client.ts
+- [x] T043 [P] [US1] Package Model2Vec distilled model (~8-30MB) for Lambda deployment in infra/aws/lambda/tag-ranker/model/
+- [x] T044 [US1] Implement semantic ranking with Model2Vec hybrid scoring (70% semantic, 30% frequency) in infra/aws/lambda/tag-ranker/handler.ts
+- [ ] T045 [US1] Add 3s timeout and graceful fallback logic per FR-014 in infra/aws/lambda/tag-ranker/handler.ts
+- [ ] T046 [US1] Create POST /api/articles/[articleId]/tags/suggest route handler in apps/web/app/api/articles/[articleId]/tags/suggest/route.ts
+- [ ] T047 [US1] Add tag_suggestion.latency_ms and tag_suggestion.success_rate metrics per OR-002 in apps/web/app/api/articles/[articleId]/tags/suggest/route.ts
+- [ ] T048 [US1] Create POST /api/articles route handler for composing articles in apps/web/app/api/articles/route.ts
+- [ ] T049 [US1] Implement draft storage logic with S3 encryption in apps/web/lib/draft-storage.ts
+- [ ] T050 [US1] Integrate draft auto-save in editor component in apps/web/components/editor/editor.tsx
+- [ ] T051 [US1] Create editor page route in apps/web/app/(editor)/compose/page.tsx
+- [ ] T052 [US1] Add validation for appearance settings (14-24px font, 0-64px padding) in apps/web/lib/validators/appearance.ts
+- [ ] T053 [US1] Add logging for compose/edit actions with author_id and article_id in apps/web/app/api/articles/route.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can compose, edit, adjust appearance, and save drafts with auto-suggested tags
 
@@ -364,11 +370,11 @@ With multiple developers:
 
 ## Task Summary
 
-**Total Tasks**: 110
+**Total Tasks**: 114 (updated 2025-11-14)
 
 - Phase 1 (Setup): 11 tasks (all complete ✓)
 - Phase 2 (Foundational): 18 tasks (all complete ✓)
-- Phase 3 (User Story 1): 20 tasks
+- Phase 3 (User Story 1): 24 tasks (4 new tasks for Model2Vec semantic ranking)
 - Phase 4 (User Story 2): 13 tasks
 - Phase 5 (User Story 3): 20 tasks
 - Phase 6 (Category Navigation): 13 tasks
@@ -376,15 +382,15 @@ With multiple developers:
 
 **Tasks by User Story**:
 
-- User Story 1 (Compose): 20 tasks
+- User Story 1 (Compose): 24 tasks (includes Model2Vec Lambda deployment)
 - User Story 2 (Import): 13 tasks
 - User Story 3 (Schedule): 20 tasks
-- Shared/Infrastructure: 28 tasks (Phases 1-2)
+- Shared/Infrastructure: 29 tasks (Phases 1-2)
 - Cross-cutting: 28 tasks (Phases 6-7)
 
-**Parallel Opportunities**: 45 tasks marked [P] can run in parallel within their phase
+**Parallel Opportunities**: 47 tasks marked [P] can run in parallel within their phase
 
-**MVP Scope** (Recommended): Phases 1-4 (User Stories 1 & 2) = 62 tasks
+**MVP Scope** (Recommended): Phases 1-4 (User Stories 1 & 2) = 66 tasks
 
 - Enables compose and import workflows
 - All foundational infrastructure in place

@@ -1,0 +1,29 @@
+# Model2Vec Model Files
+# These files are large (~8-30MB) and should be downloaded via download.sh
+# Do not commit actual model weights to git
+
+# Model binary files
+*.bin
+model2vec.bin
+
+# Vocabulary file (can be large)
+vocab.txt
+
+# Temporary download files
+*.tmp
+*.download
+
+# Checksum files
+*.sha256
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Keep these files in git
+!metadata.json
+!README.md
+!download.sh
+!.gitignore
+!vocab.example.txt
+!model2vec.example.bin

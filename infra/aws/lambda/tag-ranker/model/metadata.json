@@ -1,0 +1,45 @@
+{
+  "name": "model2vec-japanese-minilm",
+  "version": "1.0.0",
+  "baseModel": "all-MiniLM-L6-v2",
+  "description": "Model2Vec distilled model for Japanese-focused multilingual semantic embeddings",
+  "size": 15728640,
+  "dimensions": 384,
+  "languages": [
+    "ja",
+    "en"
+  ],
+  "createdAt": "2025-11-14T00:00:00Z",
+  "distillationMethod": "Model2Vec static embedding distillation",
+  "accuracy": 0.95,
+  "inferenceSpeed": "5-20ms per article",
+  "coldStartTime": "500-800ms",
+  "requirements": {
+    "minMemory": "512MB",
+    "recommendedMemory": "1024MB",
+    "runtime": "Python 3.11+ or Node.js 18+",
+    "architecture": "arm64 or x86_64"
+  },
+  "files": {
+    "model": "model2vec.bin",
+    "vocabulary": "vocab.txt",
+    "metadata": "metadata.json",
+    "readme": "README.md"
+  },
+  "checksum": {
+    "algorithm": "SHA256",
+    "model": "f36668ddf22403a332f978057d527cf285b01468bc3431b04094a7bafa6aba59",
+    "vocabulary": "1394523a67ddd404a825428018c0582a6998bcfa044ecbcbf1f4d71adb94c61c"
+  },
+  "license": "MIT",
+  "citations": [
+    {
+      "title": "all-MiniLM-L6-v2",
+      "url": "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
+    },
+    {
+      "title": "Model2Vec: Distill a Small Fast Model from any Sentence Transformer",
+      "url": "https://github.com/MinishLab/model2vec"
+    }
+  ]
+}

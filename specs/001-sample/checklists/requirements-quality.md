@@ -22,8 +22,8 @@
 - [X] CHK004 Do FR-002 and FR-012 clearly define warning/error copy, remediation steps, and doc links for oversized MD/MDX files or referenced assets so UX writers know the exact text?
   **✓ COMPLETE**: FR-012 provides exact copy: "Upload blocked: `[filename]` is [actual_size] MB. Files must be ≤8 MB. See docs/blog/import-limits for guidance." Includes toast visibility duration (10s or until dismissed). spec.md:16-17 clarifies this from Session 2025-11-12.
 
-- [ ] CHK005 Are fallback rules for auto tag suggestions (Edge Case "Auto Tag Fallback Rules", FR-003) specified for very short or multilingual drafts so manual-only workflows are unambiguous?
-  **✗ INCOMPLETE**: Edge Cases:112 mentions fallback for short/multilingual articles, but Outstanding Ambiguities explicitly flags "Auto Tag Fallback Rules" as unresolved. No specification of threshold lengths or multilingual detection strategy.
+- [X] CHK005 Are fallback rules for auto tag suggestions (Edge Case "Auto Tag Fallback Rules", FR-003) specified for very short or multilingual drafts so manual-only workflows are unambiguous?
+  **✓ COMPLETE**: FR-003 now explicitly specifies: (1) Content <100 characters → "Content too short" message; (2) No quality candidates (all tags <0.3 hybrid score) → "No quality tag suggestions found. Add tags manually."; (3) Multilingual content handled via Japanese-focused Model2Vec without language detection. Session 2025-11-14 clarifications resolved threshold lengths and multilingual strategy. Edge Cases updated with specific scenarios.
 
 - [X] CHK006 Is unsupported-format handling (FR-002) explicit about accepted extensions, MIME validation, and messaging so reviewers can tell when a format must be rejected vs. converted?
   **✓ COMPLETE**: FR-002 explicitly allows ".md and .mdx files up to 8 MB". User Story 2 Scenario 3 (spec.md:73-76) shows .docx rejection with clear messaging. openapi.yaml:69 returns 400 for validation failures (size/format). research.md:3-6 confirms Contentlayer parses only MD/MDX.

@@ -1,0 +1,31 @@
+{
+  "name": "tag-ranker-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda for tag suggestion with OpenSearch + Model2Vec hybrid ranking",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "build": "tsc",
+    "package": "npm run build && zip -r function.zip dist/ node_modules/",
+    "lint": "eslint . --ext .ts"
+  },
+  "dependencies": {
+    "@opensearch-project/opensearch": "^2.5.0",
+    "@aws-sdk/client-opensearch": "^3.460.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.6.0",
+    "vitest": "^1.0.4",
+    "@vitest/coverage-v8": "^1.0.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
