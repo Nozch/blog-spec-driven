@@ -28,6 +28,50 @@
  */
 
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+import { getModCombo, type EnvInfo } from './utils';
+
+const selectTextInEditor = async (page: Page, text: string) => {
+  await page.evaluate((substring) => {
+    const root = document.querySelector('[data-testid="editor-root"]');
+    if (!root) {
+      throw new Error('Editor root not found for selection.');
+    }
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let startNode: Text | null = null;
+    let startOffset = 0;
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const content = node.textContent ?? '';
+      const index = content.indexOf(substring);
+      if (index >= 0) {
+        startNode = node;
+        startOffset = index;
+        const selection = window.getSelection();
+        if (!selection) {
+          throw new Error('Unable to access window selection.');
+        }
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + substring.length);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return;
+      }
+    }
+    throw new Error(`Unable to locate text "${substring}" for selection.`);
+  }, text);
+};
+
+const readEnvInfo = async (page: Page): Promise<EnvInfo> => {
+  const info = await page.evaluate(() => ({
+    userAgent: navigator.userAgent,
+    platform: navigator.platform
+  }));
+  console.log('[env]', info);
+  return info;
+};
 
 test.describe('Editor - Text Formatting', () => {
   /**
@@ -35,43 +79,38 @@ test.describe('Editor - Text Formatting', () => {
    */
   test.describe('Bold Formatting (Mod-b)', () => {
     test('should apply bold formatting with Mod-b shortcut', async ({ page }) => {
-      await page.goto('/compose');
+    await page.goto('/compose');
+    const envInfo = await readEnvInfo(page);
+    const boldShortcut = getModCombo(envInfo, 'b');
 
-      const editor = page.getByRole('textbox');
-      await expect(editor).toBeVisible();
-      await editor.click();
+    const editor = page.getByRole('textbox');
+    await expect(editor).toBeVisible();
+    await editor.click();
 
-      // Type text
-      await page.keyboard.type('Hello World');
+	    // Type text
+	    await page.keyboard.type('Hello World');
 
-      // Select "World" (move cursor back 5 chars, shift+right 5 times)
-      for (let i = 0; i < 5; i++) {
-        await page.keyboard.press('ArrowLeft');
-      }
-      for (let i = 0; i < 5; i++) {
-        await page.keyboard.press('Shift+ArrowRight');
-      }
+	    await selectTextInEditor(page, 'World');
 
-      // Apply bold with Mod-b
-      await page.keyboard.press('Meta+b'); // Mac: Cmd+b, Windows/Linux: Ctrl+b
+	    // Apply bold with Mod-b
+    await page.keyboard.press(boldShortcut);
 
-      // Verify <strong> tag appears
-      const strongElement = editor.locator('strong');
-      await expect(strongElement).toBeVisible();
-      await expect(strongElement).toContainText('World');
+	    const paragraph = editor.locator('p');
+	    const strongElement = editor.locator('strong');
+	    await expect(strongElement).toBeVisible();
+	    await expect(strongElement).toContainText('World');
 
-      // Verify "Hello" is not bold
-      const paragraph = editor.locator('p');
-      await expect(paragraph).toContainText('Hello');
+	    await expect(paragraph).toContainText('Hello');
 
-      // Verify the structure: paragraph contains both text and strong tag
-      const html = await paragraph.innerHTML();
-      expect(html).toContain('Hello');
-      expect(html).toContain('<strong>World</strong>');
+	    await expect
+	      .poll(async () => paragraph.innerHTML())
+	      .toContain('<strong>World</strong>');
     });
 
     test('should remove bold formatting when toggling with Mod-b', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
 
       const editor = page.getByRole('textbox');
       await editor.click();
@@ -83,7 +122,7 @@ test.describe('Editor - Text Formatting', () => {
       await page.keyboard.press('Meta+a');
 
       // Apply bold
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Verify bold applied
       let strongElement = editor.locator('strong');
@@ -91,7 +130,7 @@ test.describe('Editor - Text Formatting', () => {
 
       // Keep selection and toggle bold off
       await page.keyboard.press('Meta+a');
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Verify bold removed (strong tag should not exist)
       strongElement = editor.locator('strong');
@@ -102,40 +141,66 @@ test.describe('Editor - Text Formatting', () => {
     });
 
     test('should apply bold to multiple words', async ({ page }) => {
+      page.on('console', (message) => {
+        if (message.type() === 'log' && message.text().startsWith('editor keydown')) {
+          console.log('[page]', message.text());
+        }
+      });
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
 
       const editor = page.getByRole('textbox');
       await editor.click();
+      await page.evaluate(() => {
+        const root = document.querySelector('[data-testid="editor-root"]');
+        if (!root) {
+          console.warn('editor root not found for keydown logging');
+          return;
+        }
+        const handler = (event: KeyboardEvent) => {
+          console.log('editor keydown', {
+            key: event.key,
+            code: event.code,
+            ctrlKey: event.ctrlKey,
+            metaKey: event.metaKey,
+            altKey: event.altKey,
+            shiftKey: event.shiftKey
+          });
+        };
+        root.addEventListener('keydown', handler);
+        (window as any).__editorKeydownLogger = handler;
+      });
 
       // Type sentence
       await page.keyboard.type('The quick brown fox');
 
-      // Select "quick brown" (position cursor after "The ", then shift-select)
-      await page.keyboard.press('Home');
-      for (let i = 0; i < 4; i++) {
-        await page.keyboard.press('ArrowRight'); // After "The "
-      }
-      for (let i = 0; i < 11; i++) {
-        await page.keyboard.press('Shift+ArrowRight'); // Select "quick brown"
-      }
+      await selectTextInEditor(page, 'quick brown');
 
       // Apply bold
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Verify
       const strongElement = editor.locator('strong');
       await expect(strongElement).toContainText('quick brown');
 
       // Verify structure
+      await expect
+        .poll(async () => {
+          const paragraph = editor.locator('p');
+          return paragraph.innerHTML();
+        })
+        .toContain('<strong>quick brown</strong>');
       const paragraph = editor.locator('p');
       const html = await paragraph.innerHTML();
       expect(html).toContain('The ');
-      expect(html).toContain('<strong>quick brown</strong>');
       expect(html).toContain(' fox');
     });
 
     test('should apply bold while typing (no selection)', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
 
       const editor = page.getByRole('textbox');
       await editor.click();
@@ -144,13 +209,13 @@ test.describe('Editor - Text Formatting', () => {
       await page.keyboard.type('Normal ');
 
       // Activate bold
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Type bold text
       await page.keyboard.type('bold');
 
       // Deactivate bold
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Type normal again
       await page.keyboard.type(' normal');
@@ -169,6 +234,8 @@ test.describe('Editor - Text Formatting', () => {
   test.describe('Italic Formatting (Mod-i)', () => {
     test('should apply italic formatting with Mod-i shortcut', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const italicShortcut = getModCombo(envInfo, 'i');
 
       const editor = page.getByRole('textbox');
       await editor.click();
@@ -176,16 +243,10 @@ test.describe('Editor - Text Formatting', () => {
       // Type text
       await page.keyboard.type('Hello World');
 
-      // Select "World"
-      for (let i = 0; i < 5; i++) {
-        await page.keyboard.press('ArrowLeft');
-      }
-      for (let i = 0; i < 5; i++) {
-        await page.keyboard.press('Shift+ArrowRight');
-      }
+      await selectTextInEditor(page, 'World');
 
       // Apply italic with Mod-i
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(italicShortcut);
 
       // Verify <em> tag appears
       const emElement = editor.locator('em');
@@ -201,6 +262,8 @@ test.describe('Editor - Text Formatting', () => {
 
     test('should remove italic formatting when toggling with Mod-i', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const italicShortcut = getModCombo(envInfo, 'i');
 
       const editor = page.getByRole('textbox');
       await editor.click();
@@ -210,7 +273,7 @@ test.describe('Editor - Text Formatting', () => {
       await page.keyboard.press('Meta+a');
 
       // Apply italic
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(italicShortcut);
 
       // Verify italic applied
       let emElement = editor.locator('em');
@@ -218,7 +281,7 @@ test.describe('Editor - Text Formatting', () => {
 
       // Toggle italic off
       await page.keyboard.press('Meta+a');
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(italicShortcut);
 
       // Verify italic removed
       emElement = editor.locator('em');
@@ -228,15 +291,17 @@ test.describe('Editor - Text Formatting', () => {
 
     test('should apply italic while typing (no selection)', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const italicShortcut = getModCombo(envInfo, 'i');
 
       const editor = page.getByRole('textbox');
       await editor.click();
 
       // Type normal, activate italic, type italic, deactivate, type normal
       await page.keyboard.type('Normal ');
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(italicShortcut);
       await page.keyboard.type('italic');
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(italicShortcut);
       await page.keyboard.type(' normal');
 
       // Verify structure
@@ -253,6 +318,9 @@ test.describe('Editor - Text Formatting', () => {
   test.describe('Combined Bold + Italic', () => {
     test('should apply both bold and italic to same text', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
+      const italicShortcut = getModCombo(envInfo, 'i');
 
       const editor = page.getByRole('textbox');
       await editor.click();
@@ -264,11 +332,11 @@ test.describe('Editor - Text Formatting', () => {
       await page.keyboard.press('Meta+a');
 
       // Apply bold
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Apply italic (selection should still be active)
       await page.keyboard.press('Meta+a');
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(italicShortcut);
 
       // Verify both <strong> and <em> exist
       const strongElement = editor.locator('strong');
@@ -291,25 +359,28 @@ test.describe('Editor - Text Formatting', () => {
 
     test('should toggle bold and italic independently', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
+      const italicShortcut = getModCombo(envInfo, 'i');
 
       const editor = page.getByRole('textbox');
       await editor.click();
 
       // Type text with bold
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
       await page.keyboard.type('Bold');
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
       await page.keyboard.type(' ');
 
       // Type text with italic
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(italicShortcut);
       await page.keyboard.type('Italic');
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(italicShortcut);
       await page.keyboard.type(' ');
 
       // Type text with both
-      await page.keyboard.press('Meta+b');
-      await page.keyboard.press('Meta+i');
+      await page.keyboard.press(boldShortcut);
+      await page.keyboard.press(italicShortcut);
       await page.keyboard.type('Both');
 
       // Verify structure
@@ -328,6 +399,8 @@ test.describe('Editor - Text Formatting', () => {
   test.describe('Multi-Paragraph Formatting', () => {
     test('should apply formatting only to selected paragraph', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
 
       const editor = page.getByRole('textbox');
       await editor.click();
@@ -337,12 +410,10 @@ test.describe('Editor - Text Formatting', () => {
       await page.keyboard.press('Enter');
       await page.keyboard.type('Second paragraph');
 
-      // Go back to first paragraph and select it
-      await page.keyboard.press('ArrowUp');
-      await page.keyboard.press('Meta+a'); // This selects all in current block
+      await selectTextInEditor(page, 'First paragraph');
 
       // Apply bold
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Verify only first paragraph is bold
       const paragraphs = editor.locator('p');
@@ -365,6 +436,8 @@ test.describe('Editor - Text Formatting', () => {
   test.describe('Edge Cases', () => {
     test('should handle formatting with special characters', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
 
       const editor = page.getByRole('textbox');
       await editor.click();
@@ -374,7 +447,7 @@ test.describe('Editor - Text Formatting', () => {
 
       // Select and bold
       await page.keyboard.press('Meta+a');
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Verify special characters preserved
       const strongElement = editor.locator('strong');
@@ -383,14 +456,16 @@ test.describe('Editor - Text Formatting', () => {
 
     test('should preserve formatting when adding text', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
 
       const editor = page.getByRole('textbox');
       await editor.click();
 
       // Create bold text
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
       await page.keyboard.type('Bold');
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
 
       // Move cursor back into bold text
       await page.keyboard.press('ArrowLeft');
@@ -406,6 +481,8 @@ test.describe('Editor - Text Formatting', () => {
 
     test('should handle rapid format toggling', async ({ page }) => {
       await page.goto('/compose');
+      const envInfo = await readEnvInfo(page);
+      const boldShortcut = getModCombo(envInfo, 'b');
 
       const editor = page.getByRole('textbox');
       await editor.click();
@@ -414,9 +491,9 @@ test.describe('Editor - Text Formatting', () => {
       await page.keyboard.press('Meta+a');
 
       // Rapidly toggle bold multiple times
-      await page.keyboard.press('Meta+b');
-      await page.keyboard.press('Meta+b');
-      await page.keyboard.press('Meta+b');
+      await page.keyboard.press(boldShortcut);
+      await page.keyboard.press(boldShortcut);
+      await page.keyboard.press(boldShortcut);
 
       // Final state should be bold (odd number of toggles)
       const strongElement = editor.locator('strong');
