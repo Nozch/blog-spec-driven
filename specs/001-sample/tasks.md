@@ -3,9 +3,9 @@
 **Input**: Design documents from `/specs/001-sample/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: Tests are NOT explicitly requested in the feature specification, so test tasks are omitted per guidelines.
+**Tests**: E2E test tasks have been added for User Story 1 to validate editor interactions that cannot be tested in JSDOM (typing, formatting, keyboard navigation). These tests use Playwright for real browser testing.
 
-**Last Updated**: 2025-11-14 - Updated tag suggestion tasks (T042-T047) to reflect Model2Vec semantic ranking model decision from research.md
+**Last Updated**: 2025-11-16 - Added 5 E2E test tasks (T054-T058) for User Story 1 editor functionality in Playwright
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -106,7 +106,17 @@ Based on plan.md, this is a web monorepo with:
 - [ ] T052 [US1] Add validation for appearance settings (14-24px font, 0-64px padding) in apps/web/lib/validators/appearance.ts
 - [ ] T053 [US1] Add logging for compose/edit actions with author_id and article_id in apps/web/app/api/articles/route.ts
 
-**Checkpoint**: At this point, User Story 1 should be fully functional - users can compose, edit, adjust appearance, and save drafts with auto-suggested tags
+### E2E Tests for User Story 1
+
+**Note**: The following E2E tests use Playwright to test editor functionality in a real browser environment. They cover user interactions that cannot be tested in JSDOM (typing, formatting, keyboard navigation). These tests validate the independent test criteria for User Story 1.
+
+- [x] T054 [P] [US1] Create E2E test for basic typing and onChange callbacks in apps/web/tests/e2e/editor/basic-typing.spec.ts
+- [ ] T055 [P] [US1] Create E2E test for auto-save after edits with debouncing in apps/web/tests/e2e/editor/auto-save.spec.ts
+- [ ] T056 [P] [US1] Create E2E test for text formatting (bold/italic) via toolbar and keyboard shortcuts in apps/web/tests/e2e/editor/text-formatting.spec.ts
+- [ ] T057 [P] [US1] Create E2E test for keyboard shortcuts and navigation between paragraphs in apps/web/tests/e2e/editor/keyboard-nav.spec.ts
+- [ ] T058 [P] [US1] Create E2E test for heading level changes and block formatting in apps/web/tests/e2e/editor/headings.spec.ts
+
+**Checkpoint**: At this point, User Story 1 should be fully functional - users can compose, edit, adjust appearance, and save drafts with auto-suggested tags. All E2E tests validate real browser interactions.
 
 ---
 
@@ -118,19 +128,19 @@ Based on plan.md, this is a web monorepo with:
 
 ### Implementation for User Story 2
 
-- [ ] T050 [P] [US2] Implement file size validation (≤8 MB) in packages/importer/src/validators/size-validator.ts
-- [ ] T051 [P] [US2] Implement format validation (.md/.mdx only) in packages/importer/src/validators/format-validator.ts
-- [ ] T052 [P] [US2] Implement MDX asset size inspection for referenced media in packages/importer/src/validators/asset-validator.ts
-- [ ] T053 [US2] Create MDX parser with Contentlayer in packages/importer/src/parsers/mdx-parser.ts
-- [ ] T054 [US2] Implement oversized asset warning logic in packages/importer/src/warnings/oversized-asset-warning.ts
-- [ ] T055 [US2] Create import result type with warnings/errors in packages/importer/src/types/import-result.ts
-- [ ] T056 [US2] Create file upload UI component with drag-drop in apps/web/components/importer/file-upload.tsx
-- [ ] T057 [P] [US2] Create import validation feedback UI component in apps/web/components/importer/validation-feedback.tsx
-- [ ] T058 [US2] Create POST /api/articles/import route handler in apps/web/app/api/articles/import/route.ts
-- [ ] T059 [US2] Integrate importer with editor to populate TipTap state in apps/web/lib/importer-to-editor.ts
-- [ ] T060 [US2] Create import page route in apps/web/app/(editor)/import/page.tsx
-- [ ] T061 [US2] Implement file size warning UX per research.md decision in apps/web/components/importer/file-size-warning.tsx
-- [ ] T062 [US2] Add logging for import validation failures in apps/web/app/api/articles/import/route.ts
+- [ ] T059 [P] [US2] Implement file size validation (≤8 MB) in packages/importer/src/validators/size-validator.ts
+- [ ] T060 [P] [US2] Implement format validation (.md/.mdx only) in packages/importer/src/validators/format-validator.ts
+- [ ] T061 [P] [US2] Implement MDX asset size inspection for referenced media in packages/importer/src/validators/asset-validator.ts
+- [ ] T062 [US2] Create MDX parser with Contentlayer in packages/importer/src/parsers/mdx-parser.ts
+- [ ] T063 [US2] Implement oversized asset warning logic in packages/importer/src/warnings/oversized-asset-warning.ts
+- [ ] T064 [US2] Create import result type with warnings/errors in packages/importer/src/types/import-result.ts
+- [ ] T065 [US2] Create file upload UI component with drag-drop in apps/web/components/importer/file-upload.tsx
+- [ ] T066 [P] [US2] Create import validation feedback UI component in apps/web/components/importer/validation-feedback.tsx
+- [ ] T067 [US2] Create POST /api/articles/import route handler in apps/web/app/api/articles/import/route.ts
+- [ ] T068 [US2] Integrate importer with editor to populate TipTap state in apps/web/lib/importer-to-editor.ts
+- [ ] T069 [US2] Create import page route in apps/web/app/(editor)/import/page.tsx
+- [ ] T070 [US2] Implement file size warning UX per research.md decision in apps/web/components/importer/file-size-warning.tsx
+- [ ] T071 [US2] Add logging for import validation failures in apps/web/app/api/articles/import/route.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - users can compose OR import articles
 
@@ -144,26 +154,26 @@ Based on plan.md, this is a web monorepo with:
 
 ### Implementation for User Story 3
 
-- [ ] T063 [P] [US3] Implement JST to UTC time conversion utilities in packages/scheduler-sdk/src/utils/timezone.ts
-- [ ] T064 [P] [US3] Implement past-time validation for scheduling in packages/scheduler-sdk/src/validators/schedule-validator.ts
-- [ ] T065 [P] [US3] Create BullMQ job definition for publish jobs in packages/scheduler-sdk/src/jobs/publish-job.ts
-- [ ] T066 [P] [US3] Create scheduling UI component with JST datetime picker in apps/web/components/scheduler/schedule-picker.tsx
-- [ ] T067 [P] [US3] Create schedule edit prompt modal component in apps/web/components/scheduler/edit-prompt.tsx
-- [ ] T068 [US3] Create POST /api/articles/[articleId]/schedule route handler in apps/web/app/api/articles/[articleId]/schedule/route.ts
-- [ ] T069 [US3] Implement BullMQ queue initialization with Upstash Redis in services/publisher/src/queue/publish-queue.ts
-- [ ] T070 [US3] Implement publish job processor in services/publisher/src/jobs/publish-processor.ts
-- [ ] T071 [US3] Implement article status transition logic (draft → scheduled → published) in services/publisher/src/services/article-service.ts
-- [ ] T072 [US3] Create AWS SES email notification service in services/publisher/src/notifications/email-service.ts
-- [ ] T073 [US3] Implement publish failure notification email template per research.md in services/publisher/src/notifications/templates/publish-failure.ts
-- [ ] T074 [US3] Add failure notification logic to publish processor in services/publisher/src/jobs/publish-processor.ts
-- [ ] T075 [US3] Implement schedule edit detection and prompt trigger in apps/web/components/editor/editor.tsx
-- [ ] T076 [US3] Create POST /api/articles/[articleId]/toggle route handler for publish/private toggle in apps/web/app/api/articles/[articleId]/toggle/route.ts
-- [ ] T077 [US3] Implement cache purge logic for category pages on publish/unpublish in apps/web/lib/cache/purge.ts
-- [ ] T078 [US3] Add draft privacy enforcement via RLS policy validation in apps/web/lib/auth/draft-access.ts
-- [ ] T079 [US3] Implement schedule confirmation UI in publish workflow in apps/web/components/scheduler/schedule-confirm.tsx
-- [ ] T080 [US3] Add logging for schedule operations and notifications in services/publisher/src/jobs/publish-processor.ts
-- [ ] T081 [US3] Create publish.success_rate metric emission in services/publisher/src/telemetry/metrics.ts
-- [ ] T082 [US3] Create publish.failure_count metric emission in services/publisher/src/telemetry/metrics.ts
+- [ ] T072 [P] [US3] Implement JST to UTC time conversion utilities in packages/scheduler-sdk/src/utils/timezone.ts
+- [ ] T073 [P] [US3] Implement past-time validation for scheduling in packages/scheduler-sdk/src/validators/schedule-validator.ts
+- [ ] T074 [P] [US3] Create BullMQ job definition for publish jobs in packages/scheduler-sdk/src/jobs/publish-job.ts
+- [ ] T075 [P] [US3] Create scheduling UI component with JST datetime picker in apps/web/components/scheduler/schedule-picker.tsx
+- [ ] T076 [P] [US3] Create schedule edit prompt modal component in apps/web/components/scheduler/edit-prompt.tsx
+- [ ] T077 [US3] Create POST /api/articles/[articleId]/schedule route handler in apps/web/app/api/articles/[articleId]/schedule/route.ts
+- [ ] T078 [US3] Implement BullMQ queue initialization with Upstash Redis in services/publisher/src/queue/publish-queue.ts
+- [ ] T079 [US3] Implement publish job processor in services/publisher/src/jobs/publish-processor.ts
+- [ ] T080 [US3] Implement article status transition logic (draft → scheduled → published) in services/publisher/src/services/article-service.ts
+- [ ] T081 [US3] Create AWS SES email notification service in services/publisher/src/notifications/email-service.ts
+- [ ] T082 [US3] Implement publish failure notification email template per research.md in services/publisher/src/notifications/templates/publish-failure.ts
+- [ ] T083 [US3] Add failure notification logic to publish processor in services/publisher/src/jobs/publish-processor.ts
+- [ ] T084 [US3] Implement schedule edit detection and prompt trigger in apps/web/components/editor/editor.tsx
+- [ ] T085 [US3] Create POST /api/articles/[articleId]/toggle route handler for publish/private toggle in apps/web/app/api/articles/[articleId]/toggle/route.ts
+- [ ] T086 [US3] Implement cache purge logic for category pages on publish/unpublish in apps/web/lib/cache/purge.ts
+- [ ] T087 [US3] Add draft privacy enforcement via RLS policy validation in apps/web/lib/auth/draft-access.ts
+- [ ] T088 [US3] Implement schedule confirmation UI in publish workflow in apps/web/components/scheduler/schedule-confirm.tsx
+- [ ] T089 [US3] Add logging for schedule operations and notifications in services/publisher/src/jobs/publish-processor.ts
+- [ ] T090 [US3] Create publish.success_rate metric emission in services/publisher/src/telemetry/metrics.ts
+- [ ] T091 [US3] Create publish.failure_count metric emission in services/publisher/src/telemetry/metrics.ts
 
 **Checkpoint**: All user stories should now be independently functional - compose, import, schedule, and publish control all work
 
@@ -173,19 +183,19 @@ Based on plan.md, this is a web monorepo with:
 
 **Purpose**: Enable fast category navigation (Music, Movie, Tech, Blog) with paginated views showing 12 posts per page (FR-008, FR-011)
 
-- [ ] T083 [P] Create GET /api/articles route handler with category filter in apps/web/app/api/articles/route.ts
-- [ ] T084 [P] Implement pagination logic (12 posts per page) in apps/web/lib/pagination/paginator.ts
-- [ ] T085 Create category page cache builder in apps/web/lib/cache/category-cache.ts
-- [ ] T086 [P] Create category header navigation component in apps/web/components/navigation/category-header.tsx
-- [ ] T087 [P] Create paginated article list component in apps/web/components/articles/article-list.tsx
-- [ ] T088 Create category page route for Music in apps/web/app/(home)/music/page.tsx
-- [ ] T089 [P] Create category page route for Movie in apps/web/app/(home)/movie/page.tsx
-- [ ] T090 [P] Create category page route for Tech in apps/web/app/(home)/tech/page.tsx
-- [ ] T091 [P] Create category page route for Blog in apps/web/app/(home)/blog/page.tsx
-- [ ] T092 Implement ISR (revalidate=30s) for category pages in apps/web/app/(home)/[category]/page.tsx
-- [ ] T093 Integrate cache purge webhook to invalidate category pages in apps/web/lib/cache/purge.ts
-- [ ] T094 Add empty category state handling in apps/web/components/articles/empty-state.tsx
-- [ ] T095 Implement top page with first contentful paint optimization in apps/web/app/page.tsx
+- [ ] T092 [P] Create GET /api/articles route handler with category filter in apps/web/app/api/articles/route.ts
+- [ ] T093 [P] Implement pagination logic (12 posts per page) in apps/web/lib/pagination/paginator.ts
+- [ ] T094 Create category page cache builder in apps/web/lib/cache/category-cache.ts
+- [ ] T095 [P] Create category header navigation component in apps/web/components/navigation/category-header.tsx
+- [ ] T096 [P] Create paginated article list component in apps/web/components/articles/article-list.tsx
+- [ ] T097 Create category page route for Music in apps/web/app/(home)/music/page.tsx
+- [ ] T098 [P] Create category page route for Movie in apps/web/app/(home)/movie/page.tsx
+- [ ] T099 [P] Create category page route for Tech in apps/web/app/(home)/tech/page.tsx
+- [ ] T100 [P] Create category page route for Blog in apps/web/app/(home)/blog/page.tsx
+- [ ] T101 Implement ISR (revalidate=30s) for category pages in apps/web/app/(home)/[category]/page.tsx
+- [ ] T102 Integrate cache purge webhook to invalidate category pages in apps/web/lib/cache/purge.ts
+- [ ] T103 Add empty category state handling in apps/web/components/articles/empty-state.tsx
+- [ ] T104 Implement top page with first contentful paint optimization in apps/web/app/page.tsx
 
 **Checkpoint**: Category navigation and pagination complete - users can browse all categories with fast page loads (SC-001)
 
@@ -195,21 +205,21 @@ Based on plan.md, this is a web monorepo with:
 
 **Purpose**: Improvements that affect multiple user stories and meet success criteria
 
-- [ ] T096 [P] Add performance monitoring for import.duration_ms metric in apps/web/app/api/articles/import/route.ts
-- [ ] T097 [P] Add performance monitoring for frontend.first_paint_ms via Web Vitals in apps/web/lib/web-vitals.ts
-- [ ] T098 [P] Implement draft.encryption_check_pass metric for audit logs in apps/web/lib/draft-storage.ts
-- [ ] T099 [P] Add network loss handling and local draft buffer in apps/web/components/editor/editor.tsx
-- [ ] T100 [P] Implement auto tag fallback for short/multilingual content in services/tag-extractor/index.ts
-- [ ] T101 [P] Add DST-safe scheduling validation (JST doesn't observe DST) in packages/scheduler-sdk/src/validators/schedule-validator.ts
-- [ ] T102 Create rollback runbook documentation in docs/runbooks/rollback.md
-- [ ] T103 Validate quickstart.md end-to-end workflow per docs/quickstart.md
-- [ ] T104 [P] Code cleanup and refactoring across all packages
-- [ ] T105 [P] Security audit for XSS/injection vulnerabilities in MDX parsing and editor
-- [ ] T106 Setup CloudFront CDN integration via Vercel in infra/terraform/cdn.tf
-- [ ] T107 Verify <1s first paint performance target (SC-001) with k6 load tests
-- [ ] T108 Verify ≥95% scheduled publish success rate (SC-003) with telemetry validation
-- [ ] T109 Verify draft encryption at rest/transit (SC-002) with audit log verification
-- [ ] T110 [P] Create observability dashboards for monitoring in infra/terraform/observability.tf
+- [ ] T105 [P] Add performance monitoring for import.duration_ms metric in apps/web/app/api/articles/import/route.ts
+- [ ] T106 [P] Add performance monitoring for frontend.first_paint_ms via Web Vitals in apps/web/lib/web-vitals.ts
+- [ ] T107 [P] Implement draft.encryption_check_pass metric for audit logs in apps/web/lib/draft-storage.ts
+- [ ] T108 [P] Add network loss handling and local draft buffer in apps/web/components/editor/editor.tsx
+- [ ] T109 [P] Implement auto tag fallback for short/multilingual content in services/tag-extractor/index.ts
+- [ ] T110 [P] Add DST-safe scheduling validation (JST doesn't observe DST) in packages/scheduler-sdk/src/validators/schedule-validator.ts
+- [ ] T111 Create rollback runbook documentation in docs/runbooks/rollback.md
+- [ ] T112 Validate quickstart.md end-to-end workflow per docs/quickstart.md
+- [ ] T113 [P] Code cleanup and refactoring across all packages
+- [ ] T114 [P] Security audit for XSS/injection vulnerabilities in MDX parsing and editor
+- [ ] T115 Setup CloudFront CDN integration via Vercel in infra/terraform/cdn.tf
+- [ ] T116 Verify <1s first paint performance target (SC-001) with k6 load tests
+- [ ] T117 Verify ≥95% scheduled publish success rate (SC-003) with telemetry validation
+- [ ] T118 Verify draft encryption at rest/transit (SC-002) with audit log verification
+- [ ] T119 [P] Create observability dashboards for monitoring in infra/terraform/observability.tf
 
 ---
 
@@ -370,11 +380,11 @@ With multiple developers:
 
 ## Task Summary
 
-**Total Tasks**: 114 (updated 2025-11-14)
+**Total Tasks**: 119 (updated 2025-11-16)
 
 - Phase 1 (Setup): 11 tasks (all complete ✓)
 - Phase 2 (Foundational): 18 tasks (all complete ✓)
-- Phase 3 (User Story 1): 24 tasks (4 new tasks for Model2Vec semantic ranking)
+- Phase 3 (User Story 1): 29 tasks (includes 5 E2E test tasks + 4 Model2Vec semantic ranking tasks)
 - Phase 4 (User Story 2): 13 tasks
 - Phase 5 (User Story 3): 20 tasks
 - Phase 6 (Category Navigation): 13 tasks
@@ -382,18 +392,26 @@ With multiple developers:
 
 **Tasks by User Story**:
 
-- User Story 1 (Compose): 24 tasks (includes Model2Vec Lambda deployment)
+- User Story 1 (Compose): 29 tasks (includes E2E tests, Model2Vec Lambda deployment)
 - User Story 2 (Import): 13 tasks
 - User Story 3 (Schedule): 20 tasks
 - Shared/Infrastructure: 29 tasks (Phases 1-2)
 - Cross-cutting: 28 tasks (Phases 6-7)
 
-**Parallel Opportunities**: 47 tasks marked [P] can run in parallel within their phase
+**E2E Test Tasks**: 5 new tasks added for User Story 1
+- T054: Basic typing and onChange callbacks
+- T055: Auto-save after edits with debouncing
+- T056: Text formatting (bold/italic) via toolbar and keyboard shortcuts
+- T057: Keyboard shortcuts and navigation
+- T058: Heading level changes and block formatting
 
-**MVP Scope** (Recommended): Phases 1-4 (User Stories 1 & 2) = 66 tasks
+**Parallel Opportunities**: 52 tasks marked [P] can run in parallel within their phase (includes 5 parallel E2E tests)
+
+**MVP Scope** (Recommended): Phases 1-4 (User Stories 1 & 2) = 71 tasks
 
 - Enables compose and import workflows
 - All foundational infrastructure in place
 - Independent test criteria met for US1 and US2
+- Includes comprehensive E2E test coverage for editor interactions
 
 **Format Validation**: ✓ All tasks follow checklist format (checkbox, ID, labels, file paths)
