@@ -111,7 +111,7 @@ Based on plan.md, this is a web monorepo with:
 **Note**: The following E2E tests use Playwright to test editor functionality in a real browser environment. They cover user interactions that cannot be tested in JSDOM (typing, formatting, keyboard navigation). These tests validate the independent test criteria for User Story 1.
 
 - [x] T054 [P] [US1] Create E2E test for basic typing and onChange callbacks in apps/web/tests/e2e/editor/basic-typing.spec.ts
-- [ ] T055 [P] [US1] Create E2E test for auto-save after edits with debouncing in apps/web/tests/e2e/editor/auto-save.spec.ts
+- [x] T055 [P] [US1] Create E2E test for auto-save after edits with debouncing in apps/web/tests/e2e/editor/auto-save.spec.ts
 - [ ] T056 [P] [US1] Create E2E test for text formatting (bold/italic) via toolbar and keyboard shortcuts in apps/web/tests/e2e/editor/text-formatting.spec.ts
 - [ ] T057 [P] [US1] Create E2E test for keyboard shortcuts and navigation between paragraphs in apps/web/tests/e2e/editor/keyboard-nav.spec.ts
 - [ ] T058 [P] [US1] Create E2E test for heading level changes and block formatting in apps/web/tests/e2e/editor/headings.spec.ts
