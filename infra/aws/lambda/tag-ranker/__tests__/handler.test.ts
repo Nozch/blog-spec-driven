@@ -511,4 +511,195 @@ describe('Tag Ranker Lambda Handler', () => {
       expect(response.tags).toBeUndefined();
     });
   });
+
+  describe('Timeout and Fallback (T045)', () => {
+    it('should enforce 3-second timeout for total operation', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Test content for timeout validation with sufficient length to meet minimum requirements for tag suggestion processing.',
+      };
+
+      // Mock both services to take longer than 3 seconds (4 seconds each)
+      // Even in parallel, this will exceed the 3s timeout
+      mockOpenSearchClient.extractKeywords.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve([
+                  { text: 'test', frequency: 1.0 },
+                ]),
+              4000
+            )
+          )
+      );
+
+      mockModel2VecLoader.load.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({}), 4000)
+          )
+      );
+
+      const start = Date.now();
+      const response = await handler(event);
+      const duration = Date.now() - start;
+
+      expect(response.success).toBe(false);
+      expect(response.error).toMatch(/timed? ?out/i); // Match "timeout" or "timed out"
+      expect(duration).toBeLessThanOrEqual(3500); // 3s timeout + 500ms buffer
+    }, 5000); // Test timeout: 5 seconds to allow for handler timeout
+
+    it('should return frequency-only tags when Model2Vec fails but OpenSearch succeeds', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'JavaScript and TypeScript are popular programming languages used for web development and application building.',
+      };
+
+      const keywords: KeywordCandidate[] = [
+        { text: 'javascript', frequency: 1.0 },
+        { text: 'typescript', frequency: 0.8 },
+        { text: 'programming', frequency: 0.6 },
+      ];
+
+      mockOpenSearchClient.extractKeywords.mockResolvedValue(keywords);
+      mockModel2VecLoader.load.mockRejectedValue(
+        new Error('Model2Vec loading failed')
+      );
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(true);
+      expect(response.tags).toBeDefined();
+      expect(response.tags!.length).toBeGreaterThan(0);
+
+      // Verify tags are returned with frequency-only scores (normalized)
+      expect(response.tags![0].tag).toBe('javascript');
+      expect(response.message).toContain('frequency-only');
+    });
+
+    it('should fail when OpenSearch fails even if Model2Vec would succeed', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Test content for OpenSearch failure scenario with enough text to meet minimum length requirements.',
+      };
+
+      mockOpenSearchClient.extractKeywords.mockRejectedValue(
+        new Error('OpenSearch connection failed')
+      );
+      mockModel2VecLoader.load.mockResolvedValue({});
+      mockModel2VecLoader.embed.mockResolvedValue([0.5, 0.5]);
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBeDefined();
+      expect(response.tags).toBeUndefined();
+    });
+
+    it('should fail when both OpenSearch and Model2Vec fail', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Test content for total failure scenario with adequate length to pass validation checks.',
+      };
+
+      mockOpenSearchClient.extractKeywords.mockRejectedValue(
+        new Error('OpenSearch failed')
+      );
+      mockModel2VecLoader.load.mockRejectedValue(
+        new Error('Model2Vec failed')
+      );
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBeDefined();
+      expect(response.tags).toBeUndefined();
+    });
+
+    it('should run OpenSearch and Model2Vec in parallel', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Performance test content to validate parallel execution of OpenSearch keyword extraction and Model2Vec semantic ranking.',
+      };
+
+      const keywords: KeywordCandidate[] = [
+        { text: 'test', frequency: 1.0 },
+      ];
+
+      let opensearchStartTime = 0;
+      let model2vecStartTime = 0;
+
+      mockOpenSearchClient.extractKeywords.mockImplementation(async () => {
+        opensearchStartTime = Date.now();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return keywords;
+      });
+
+      mockModel2VecLoader.load.mockImplementation(async () => {
+        model2vecStartTime = Date.now();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return {};
+      });
+
+      mockModel2VecLoader.embed.mockResolvedValue([0.5, 0.5]);
+      mockModel2VecLoader.computeSimilarity.mockReturnValue(0.8);
+
+      const start = Date.now();
+      await handler(event);
+      const duration = Date.now() - start;
+
+      // If parallel, duration should be ~100ms (max of both)
+      // If sequential, duration would be ~200ms (sum of both)
+      expect(duration).toBeLessThan(150); // Parallel execution
+
+      // Both should start at roughly the same time (within 50ms)
+      expect(Math.abs(opensearchStartTime - model2vecStartTime)).toBeLessThan(50);
+    });
+
+    it('should include component latency metrics in response', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Metrics test content with adequate length for testing component-level latency tracking and monitoring.',
+      };
+
+      const keywords: KeywordCandidate[] = [
+        { text: 'test', frequency: 1.0 },
+      ];
+
+      mockOpenSearchClient.extractKeywords.mockResolvedValue(keywords);
+      mockModel2VecLoader.load.mockResolvedValue({});
+      mockModel2VecLoader.embed.mockResolvedValue([0.5, 0.5]);
+      mockModel2VecLoader.computeSimilarity.mockReturnValue(0.8);
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(true);
+      expect(response.metrics).toBeDefined();
+      expect(response.metrics!.opensearchLatencyMs).toBeDefined();
+      expect(response.metrics!.model2vecLatencyMs).toBeDefined();
+      expect(response.metrics!.totalLatencyMs).toBeDefined();
+
+      // Total should be >= max(opensearch, model2vec) for parallel execution
+      const maxComponent = Math.max(
+        response.metrics!.opensearchLatencyMs!,
+        response.metrics!.model2vecLatencyMs!
+      );
+      expect(response.metrics!.totalLatencyMs).toBeGreaterThanOrEqual(maxComponent);
+    });
+
+    it('should provide retry guidance only when both components fail', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Test content for retry policy validation with sufficient length to meet minimum character requirements.',
+      };
+
+      mockOpenSearchClient.extractKeywords.mockRejectedValue(
+        new Error('OpenSearch service unavailable')
+      );
+      mockModel2VecLoader.load.mockRejectedValue(
+        new Error('Model2Vec service unavailable')
+      );
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBeDefined();
+      // Message should indicate user can retry manually
+      expect(response.message).toContain('retry');
+    });
+  });
 });
