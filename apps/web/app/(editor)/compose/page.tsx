@@ -11,13 +11,35 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Editor from '../../../components/editor/editor';
 import type { EditorSerializedState } from '@blog-spec/editor';
 import { loadDraft, saveDraft } from '../../../src/lib/drafts';
 
 const ComposePage = () => {
   const [isSaving, setIsSaving] = useState(false);
+
+  // DEBUG: Log keyboard events to diagnose Playwright shortcut issue
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      console.log('[DEBUG] Key event:', {
+        key: e.key,
+        code: e.code,
+        metaKey: e.metaKey,
+        ctrlKey: e.ctrlKey,
+        altKey: e.altKey,
+        shiftKey: e.shiftKey,
+      });
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    console.log('[DEBUG] Keydown listener attached');
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      console.log('[DEBUG] Keydown listener removed');
+    };
+  }, []);
 
   // Handle auto-save
   const handleSave = useCallback(async (state: EditorSerializedState) => {
