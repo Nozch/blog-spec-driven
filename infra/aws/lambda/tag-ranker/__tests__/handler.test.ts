@@ -71,56 +71,54 @@ describe('Tag Ranker Lambda Handler', () => {
       const contentEmbedding = [0.5, 0.5, 0.5];
       mockModel2VecLoader.embed.mockResolvedValueOnce(contentEmbedding);
 
-      // Mock keyword embeddings and similarity scores
-      // typescript: high semantic similarity (0.9)
-      // programming: medium semantic similarity (0.7)
-      // language: medium semantic similarity (0.6)
-      // static: low semantic similarity (0.4)
-      // typing: low semantic similarity (0.3)
-      const keywordEmbeddings = [
-        [0.9, 0.1, 0.1], // typescript
-        [0.7, 0.2, 0.1], // programming
-        [0.6, 0.3, 0.1], // language
-        [0.4, 0.4, 0.2], // static
-        [0.3, 0.5, 0.2], // typing
-      ];
+      // Always return the same embedding shape for simplicity
+      mockModel2VecLoader.embed.mockResolvedValue([0.5, 0.5, 0.5]);
 
-      let embedCallCount = 0;
-      mockModel2VecLoader.embed.mockImplementation(async (text: string) => {
-        if (embedCallCount === 0) {
-          embedCallCount++;
-          return contentEmbedding;
-        }
-        return keywordEmbeddings[embedCallCount++ - 1];
-      });
-
-      mockModel2VecLoader.computeSimilarity.mockImplementation(
-        (emb1: number[], emb2: number[]) => {
-          // Simple dot product for testing
-          return emb1.reduce((sum, val, i) => sum + val * emb2[i], 0);
-        }
-      );
+      // Raw similarity scores chosen so normalization + weighting can be asserted
+      // typescript: raw 0.8  → normalized 0.9
+      // programming: raw 0.2 → normalized 0.6
+      // language: raw -0.2   → normalized 0.4
+      // static: raw -0.6     → normalized 0.2
+      // typing: raw -0.8     → normalized 0.1
+      mockModel2VecLoader.computeSimilarity
+        .mockReturnValueOnce(0.8) // typescript
+        .mockReturnValueOnce(0.2) // programming
+        .mockReturnValueOnce(-0.2) // language
+        .mockReturnValueOnce(-0.6) // static
+        .mockReturnValueOnce(-0.8); // typing
 
       // Act
       const response = await handler(event);
-
-      // Debug
-      if (!response.success) {
-        console.log('Error:', response.error);
-        console.log('Full response:', response);
-      }
 
       // Assert
       expect(response.success).toBe(true);
       expect(response.tags).toBeDefined();
       expect(response.tags!.length).toBeGreaterThan(0);
 
-      // Verify hybrid scoring: score = 0.7 * semantic + 0.3 * frequency
-      // typescript: 0.7 * 0.45 + 0.3 * 1.0 = 0.315 + 0.3 = 0.615
-      // programming: 0.7 * 0.35 + 0.3 * 0.8 = 0.245 + 0.24 = 0.485
+      // Verify hybrid scoring with 70/30 weighting
+      // typescript: semantic=0.9, frequency=1.0 → score=0.7*0.9+0.3*1.0 = 0.93
+      // programming: semantic=0.6, frequency=0.8 → score=0.7*0.6+0.3*0.8 = 0.66
+      // language: semantic=0.4, frequency=0.6 → score=0.7*0.4+0.3*0.6 = 0.46
       const typescriptTag = response.tags!.find((t) => t.tag === 'typescript');
+      const programmingTag = response.tags!.find((t) => t.tag === 'programming');
+      const languageTag = response.tags!.find((t) => t.tag === 'language');
+
       expect(typescriptTag).toBeDefined();
-      expect(typescriptTag!.score).toBeGreaterThan(0.3); // Above threshold
+      expect(programmingTag).toBeDefined();
+      expect(languageTag).toBeDefined();
+
+      expect(typescriptTag!.score).toBeCloseTo(0.93, 3);
+      expect(programmingTag!.score).toBeCloseTo(0.66, 3);
+      expect(languageTag!.score).toBeCloseTo(0.46, 3);
+
+      // Ensure ordering reflects hybrid mix
+      expect(typescriptTag!.score).toBeGreaterThan(programmingTag!.score);
+      expect(programmingTag!.score).toBeGreaterThan(languageTag!.score);
+      expect(response.tags!.map((t) => t.tag)).toEqual([
+        'typescript',
+        'programming',
+        'language',
+      ]);
     });
 
     it('should normalize semantic scores to 0-1 range before combining', async () => {
@@ -509,6 +507,197 @@ describe('Tag Ranker Lambda Handler', () => {
         error: expect.any(String),
       });
       expect(response.tags).toBeUndefined();
+    });
+  });
+
+  describe('Timeout and Fallback (T045)', () => {
+    it('should enforce 3-second timeout for total operation', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Test content for timeout validation with sufficient length to meet minimum requirements for tag suggestion processing.',
+      };
+
+      // Mock both services to take longer than 3 seconds (4 seconds each)
+      // Even in parallel, this will exceed the 3s timeout
+      mockOpenSearchClient.extractKeywords.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve([
+                  { text: 'test', frequency: 1.0 },
+                ]),
+              4000
+            )
+          )
+      );
+
+      mockModel2VecLoader.load.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({}), 4000)
+          )
+      );
+
+      const start = Date.now();
+      const response = await handler(event);
+      const duration = Date.now() - start;
+
+      expect(response.success).toBe(false);
+      expect(response.error).toMatch(/timed? ?out/i); // Match "timeout" or "timed out"
+      expect(duration).toBeLessThanOrEqual(3500); // 3s timeout + 500ms buffer
+    }, 5000); // Test timeout: 5 seconds to allow for handler timeout
+
+    it('should return frequency-only tags when Model2Vec fails but OpenSearch succeeds', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'JavaScript and TypeScript are popular programming languages used for web development and application building.',
+      };
+
+      const keywords: KeywordCandidate[] = [
+        { text: 'javascript', frequency: 1.0 },
+        { text: 'typescript', frequency: 0.8 },
+        { text: 'programming', frequency: 0.6 },
+      ];
+
+      mockOpenSearchClient.extractKeywords.mockResolvedValue(keywords);
+      mockModel2VecLoader.load.mockRejectedValue(
+        new Error('Model2Vec loading failed')
+      );
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(true);
+      expect(response.tags).toBeDefined();
+      expect(response.tags!.length).toBeGreaterThan(0);
+
+      // Verify tags are returned with frequency-only scores (normalized)
+      expect(response.tags![0].tag).toBe('javascript');
+      expect(response.message).toContain('frequency-only');
+    });
+
+    it('should fail when OpenSearch fails even if Model2Vec would succeed', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Test content for OpenSearch failure scenario with enough text to meet minimum length requirements.',
+      };
+
+      mockOpenSearchClient.extractKeywords.mockRejectedValue(
+        new Error('OpenSearch connection failed')
+      );
+      mockModel2VecLoader.load.mockResolvedValue({});
+      mockModel2VecLoader.embed.mockResolvedValue([0.5, 0.5]);
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBeDefined();
+      expect(response.tags).toBeUndefined();
+    });
+
+    it('should fail when both OpenSearch and Model2Vec fail', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Test content for total failure scenario with adequate length to pass validation checks.',
+      };
+
+      mockOpenSearchClient.extractKeywords.mockRejectedValue(
+        new Error('OpenSearch failed')
+      );
+      mockModel2VecLoader.load.mockRejectedValue(
+        new Error('Model2Vec failed')
+      );
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBeDefined();
+      expect(response.tags).toBeUndefined();
+    });
+
+    it('should run OpenSearch and Model2Vec in parallel', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Performance test content to validate parallel execution of OpenSearch keyword extraction and Model2Vec semantic ranking.',
+      };
+
+      const keywords: KeywordCandidate[] = [
+        { text: 'test', frequency: 1.0 },
+      ];
+
+      let opensearchStartTime = 0;
+      let model2vecStartTime = 0;
+
+      mockOpenSearchClient.extractKeywords.mockImplementation(async () => {
+        opensearchStartTime = Date.now();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return keywords;
+      });
+
+      mockModel2VecLoader.load.mockImplementation(async () => {
+        model2vecStartTime = Date.now();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return {};
+      });
+
+      mockModel2VecLoader.embed.mockResolvedValue([0.5, 0.5]);
+      mockModel2VecLoader.computeSimilarity.mockReturnValue(0.8);
+
+      const start = Date.now();
+      await handler(event);
+      const duration = Date.now() - start;
+
+      // If parallel, duration should be ~100ms (max of both)
+      // If sequential, duration would be ~200ms (sum of both)
+      expect(duration).toBeLessThan(150); // Parallel execution
+
+      // Both should start at roughly the same time (within 50ms)
+      expect(Math.abs(opensearchStartTime - model2vecStartTime)).toBeLessThan(50);
+    });
+
+    it('should include component latency metrics in response', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Metrics test content with adequate length for testing component-level latency tracking and monitoring.',
+      };
+
+      const keywords: KeywordCandidate[] = [
+        { text: 'test', frequency: 1.0 },
+      ];
+
+      mockOpenSearchClient.extractKeywords.mockResolvedValue(keywords);
+      mockModel2VecLoader.load.mockResolvedValue({});
+      mockModel2VecLoader.embed.mockResolvedValue([0.5, 0.5]);
+      mockModel2VecLoader.computeSimilarity.mockReturnValue(0.8);
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(true);
+      expect(response.metrics).toBeDefined();
+      expect(response.metrics!.opensearchLatencyMs).toBeDefined();
+      expect(response.metrics!.model2vecLatencyMs).toBeDefined();
+      expect(response.metrics!.totalLatencyMs).toBeDefined();
+
+      // Total should be >= max(opensearch, model2vec) for parallel execution
+      const maxComponent = Math.max(
+        response.metrics!.opensearchLatencyMs!,
+        response.metrics!.model2vecLatencyMs!
+      );
+      expect(response.metrics!.totalLatencyMs).toBeGreaterThanOrEqual(maxComponent);
+    });
+
+    it('should provide retry guidance only when both components fail', async () => {
+      const event: TagSuggestionEvent = {
+        content: 'Test content for retry policy validation with sufficient length to meet minimum character requirements.',
+      };
+
+      mockOpenSearchClient.extractKeywords.mockRejectedValue(
+        new Error('OpenSearch service unavailable')
+      );
+      mockModel2VecLoader.load.mockRejectedValue(
+        new Error('Model2Vec service unavailable')
+      );
+
+      const response = await handler(event);
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBeDefined();
+      // Message should indicate user can retry manually
+      expect(response.message).toContain('retry');
     });
   });
 });

@@ -80,16 +80,30 @@ const HYBRID_CONFIG = {
   DEFAULT_MAX_TAGS: 5,
   /** Minimum content length (characters) */
   MIN_CONTENT_LENGTH: 100,
+  /** Maximum total operation timeout (milliseconds) - FR-014, SC-005 */
+  TIMEOUT_MS: 3000,
 } as const;
+
+/**
+ * Helper to create a promise that rejects after a timeout
+ */
+function createTimeoutPromise(timeoutMs: number): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Operation timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+}
 
 /**
  * Main Lambda handler for tag suggestion
  *
- * Implements hybrid ranking algorithm:
- * 1. Extract keywords with frequency scores from OpenSearch
- * 2. Generate semantic embeddings using Model2Vec
- * 3. Compute hybrid scores: 70% semantic + 30% frequency
- * 4. Filter by threshold and return top N tags
+ * Implements hybrid ranking algorithm with parallel execution and graceful fallback:
+ * 1. Extract keywords (OpenSearch) and load Model2Vec in parallel (T045)
+ * 2. Handle partial failures: if one succeeds, use available component (T045)
+ * 3. Enforce 3-second timeout for total operation (T045, FR-014, SC-005)
+ * 4. Compute hybrid scores when both succeed, frequency-only if Model2Vec fails
+ * 5. Filter by threshold and return top N tags
  *
  * @param event - Tag suggestion event with content and parameters
  * @returns Tag suggestion response with ranked tags or error
@@ -118,22 +132,94 @@ export async function handler(
     const scoreThreshold = minScore ?? HYBRID_CONFIG.DEFAULT_MIN_SCORE;
     const tagLimit = maxTags ?? HYBRID_CONFIG.DEFAULT_MAX_TAGS;
 
-    // Step 1: Extract keywords from OpenSearch
-    const opensearchStart = Date.now();
+    // T045: Run OpenSearch and Model2Vec in parallel with 3-second timeout
     openSearchClient = createOpenSearchClient();
+    modelLoader = createModel2VecLoader();
 
-    let keywords: KeywordCandidate[];
-    try {
-      keywords = await openSearchClient.extractKeywords(content);
-    } catch (error) {
-      if (error instanceof OpenSearchError) {
-        throw new Error(
-          `OpenSearch keyword extraction failed: ${error.message}`
-        );
+    const opensearchStart = Date.now();
+    const model2vecStart = Date.now();
+
+    // Execute both operations in parallel with timeout
+    const parallelOperation = Promise.allSettled([
+      openSearchClient.extractKeywords(content).catch((error) => {
+        if (error instanceof OpenSearchError) {
+          throw new Error(
+            `OpenSearch keyword extraction failed: ${error.message}`
+          );
+        }
+        throw error;
+      }),
+      modelLoader.load().catch((error) => {
+        if (error instanceof ModelLoadError) {
+          throw new Error(`Model2Vec loading failed: ${error.message}`);
+        }
+        throw error;
+      }),
+    ]);
+
+    // Race against timeout - if timeout wins, throw error
+    const raceResult = await Promise.race([
+      parallelOperation.then((result) => ({ result, timedOut: false })),
+      createTimeoutPromise(HYBRID_CONFIG.TIMEOUT_MS).catch((error) => {
+        throw error; // Re-throw timeout error to be caught by outer try-catch
+      }),
+    ]);
+
+    const [opensearchResult, model2vecResult] = raceResult.result;
+
+    metrics.opensearchLatencyMs = Date.now() - opensearchStart;
+    metrics.model2vecLatencyMs = Date.now() - model2vecStart;
+
+    // T045: Handle partial failures
+    let keywords: KeywordCandidate[] = [];
+    let model2vecLoaded = false;
+
+    // Check OpenSearch result
+    if (opensearchResult.status === 'fulfilled') {
+      keywords = opensearchResult.value;
+    } else {
+      // OpenSearch failed - cannot continue without keywords
+      const opensearchError =
+        opensearchResult.reason instanceof Error
+          ? opensearchResult.reason.message
+          : 'Unknown error';
+
+      // If both failed, provide retry guidance
+      if (model2vecResult.status === 'rejected') {
+        return {
+          success: false,
+          error: `Tag suggestion services are currently unavailable. Please try again or add tags manually. (OpenSearch: ${opensearchError})`,
+          message:
+            'Both components failed. You can retry by clicking "Suggest Tags" again.',
+          metrics: {
+            ...metrics,
+            totalLatencyMs: Date.now() - startTime,
+          },
+        };
       }
-      throw error;
-    } finally {
-      metrics.opensearchLatencyMs = Date.now() - opensearchStart;
+
+      // Only OpenSearch failed
+      return {
+        success: false,
+        error: `OpenSearch keyword extraction failed: ${opensearchError}`,
+        metrics: {
+          ...metrics,
+          totalLatencyMs: Date.now() - startTime,
+        },
+      };
+    }
+
+    // Check Model2Vec result
+    if (model2vecResult.status === 'fulfilled') {
+      model2vecLoaded = true;
+    } else {
+      console.warn(
+        `Model2Vec failed, falling back to frequency-only scoring: ${
+          model2vecResult.reason instanceof Error
+            ? model2vecResult.reason.message
+            : 'Unknown error'
+        }`
+      );
     }
 
     // Handle no keywords found
@@ -150,74 +236,23 @@ export async function handler(
       };
     }
 
-    // Step 2: Load Model2Vec and generate embeddings
-    const model2vecStart = Date.now();
-    modelLoader = createModel2VecLoader();
+    // T045: Compute scores based on available components
+    let tagSuggestions: TagSuggestion[];
 
-    try {
-      await modelLoader.load();
-    } catch (error) {
-      if (error instanceof ModelLoadError) {
-        throw new Error(`Model2Vec loading failed: ${error.message}`);
-      }
-      throw error;
+    if (model2vecLoaded) {
+      // Hybrid scoring (both components succeeded)
+      tagSuggestions = await computeHybridScores(
+        keywords,
+        content,
+        modelLoader!,
+        scoreThreshold
+      );
+    } else {
+      // Frequency-only scoring (Model2Vec failed, OpenSearch succeeded)
+      tagSuggestions = computeFrequencyOnlyScores(keywords, scoreThreshold);
     }
 
-    // Generate content embedding
-    const contentEmbedding = await modelLoader.embed(content);
-
-    // Generate keyword embeddings and compute semantic scores
-    const semanticScores = new Map<string, number>();
-
-    for (const keyword of keywords) {
-      try {
-        const keywordEmbedding = await modelLoader.embed(keyword.text);
-        const rawSimilarity = modelLoader.computeSimilarity(
-          contentEmbedding,
-          keywordEmbedding
-        );
-
-        // Normalize similarity from [-1, 1] to [0, 1]
-        const normalizedSimilarity = (rawSimilarity + 1) / 2;
-        semanticScores.set(keyword.text, normalizedSimilarity);
-      } catch (error) {
-        // Skip keywords that fail embedding
-        console.warn(
-          `Failed to embed keyword "${keyword.text}": ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-        continue;
-      }
-    }
-
-    metrics.model2vecLatencyMs = Date.now() - model2vecStart;
-
-    // Step 3: Compute hybrid scores
-    const tagSuggestions: TagSuggestion[] = [];
-
-    for (const keyword of keywords) {
-      const semantic = semanticScores.get(keyword.text);
-      if (semantic === undefined) {
-        // Skip if embedding failed
-        continue;
-      }
-
-      const frequency = keyword.frequency;
-
-      // Hybrid score = 70% semantic + 30% frequency
-      const hybridScore =
-        HYBRID_CONFIG.SEMANTIC_WEIGHT * semantic +
-        HYBRID_CONFIG.FREQUENCY_WEIGHT * frequency;
-
-      // Filter by threshold
-      if (hybridScore >= scoreThreshold) {
-        tagSuggestions.push({
-          tag: keyword.text,
-          score: hybridScore,
-        });
-      }
-    }
-
-    // Step 4: Sort by score descending and limit to maxTags
+    // Sort by score descending and limit to maxTags
     tagSuggestions.sort((a, b) => b.score - a.score);
     const topTags = tagSuggestions.slice(0, tagLimit);
 
@@ -234,19 +269,26 @@ export async function handler(
       };
     }
 
+    const scoringMode = model2vecLoaded ? 'hybrid' : 'frequency-only';
     return {
       success: true,
       tags: topTags,
-      message: `Generated ${topTags.length} tag suggestion${topTags.length !== 1 ? 's' : ''}`,
+      message: `Generated ${topTags.length} tag suggestion${topTags.length !== 1 ? 's' : ''} using ${scoringMode} scoring`,
       metrics,
     };
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error occurred';
 
+    // Check if it's a timeout error
+    const isTimeout = errorMessage.includes('timeout');
+
     return {
       success: false,
       error: errorMessage,
+      message: isTimeout
+        ? 'Tag suggestion timed out. Please try again or add tags manually.'
+        : undefined,
       metrics: {
         ...metrics,
         totalLatencyMs: Date.now() - startTime,
@@ -270,6 +312,105 @@ export async function handler(
       console.warn('Failed to unload Model2Vec:', error);
     }
   }
+}
+
+/**
+ * Compute hybrid scores using both OpenSearch frequency and Model2Vec semantics
+ *
+ * @param keywords - Keywords from OpenSearch with frequency scores
+ * @param content - Article content for embedding
+ * @param modelLoader - Loaded Model2Vec instance
+ * @param scoreThreshold - Minimum score threshold
+ * @returns Array of tag suggestions with hybrid scores
+ */
+async function computeHybridScores(
+  keywords: KeywordCandidate[],
+  content: string,
+  modelLoader: ReturnType<typeof createModel2VecLoader>,
+  scoreThreshold: number
+): Promise<TagSuggestion[]> {
+  const tagSuggestions: TagSuggestion[] = [];
+
+  // Generate content embedding
+  const contentEmbedding = await modelLoader.embed(content);
+
+  // Generate keyword embeddings and compute semantic scores
+  const semanticScores = new Map<string, number>();
+
+  for (const keyword of keywords) {
+    try {
+      const keywordEmbedding = await modelLoader.embed(keyword.text);
+      const rawSimilarity = modelLoader.computeSimilarity(
+        contentEmbedding,
+        keywordEmbedding
+      );
+
+      // Normalize similarity from [-1, 1] to [0, 1]
+      const normalizedSimilarity = (rawSimilarity + 1) / 2;
+      semanticScores.set(keyword.text, normalizedSimilarity);
+    } catch (error) {
+      // Skip keywords that fail embedding
+      console.warn(
+        `Failed to embed keyword "${keyword.text}": ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      continue;
+    }
+  }
+
+  // Compute hybrid scores
+  for (const keyword of keywords) {
+    const semantic = semanticScores.get(keyword.text);
+    if (semantic === undefined) {
+      // Skip if embedding failed
+      continue;
+    }
+
+    const frequency = keyword.frequency;
+
+    // Hybrid score = 70% semantic + 30% frequency
+    const hybridScore =
+      HYBRID_CONFIG.SEMANTIC_WEIGHT * semantic +
+      HYBRID_CONFIG.FREQUENCY_WEIGHT * frequency;
+
+    // Filter by threshold
+    if (hybridScore >= scoreThreshold) {
+      tagSuggestions.push({
+        tag: keyword.text,
+        score: hybridScore,
+      });
+    }
+  }
+
+  return tagSuggestions;
+}
+
+/**
+ * Compute frequency-only scores when Model2Vec is unavailable (T045 fallback)
+ *
+ * @param keywords - Keywords from OpenSearch with frequency scores
+ * @param scoreThreshold - Minimum score threshold
+ * @returns Array of tag suggestions with frequency-only scores
+ */
+function computeFrequencyOnlyScores(
+  keywords: KeywordCandidate[],
+  scoreThreshold: number
+): TagSuggestion[] {
+  const tagSuggestions: TagSuggestion[] = [];
+
+  for (const keyword of keywords) {
+    // Use frequency as the score directly
+    const score = keyword.frequency;
+
+    // Filter by threshold
+    if (score >= scoreThreshold) {
+      tagSuggestions.push({
+        tag: keyword.text,
+        score,
+      });
+    }
+  }
+
+  return tagSuggestions;
 }
 
 /**
