@@ -71,56 +71,54 @@ describe('Tag Ranker Lambda Handler', () => {
       const contentEmbedding = [0.5, 0.5, 0.5];
       mockModel2VecLoader.embed.mockResolvedValueOnce(contentEmbedding);
 
-      // Mock keyword embeddings and similarity scores
-      // typescript: high semantic similarity (0.9)
-      // programming: medium semantic similarity (0.7)
-      // language: medium semantic similarity (0.6)
-      // static: low semantic similarity (0.4)
-      // typing: low semantic similarity (0.3)
-      const keywordEmbeddings = [
-        [0.9, 0.1, 0.1], // typescript
-        [0.7, 0.2, 0.1], // programming
-        [0.6, 0.3, 0.1], // language
-        [0.4, 0.4, 0.2], // static
-        [0.3, 0.5, 0.2], // typing
-      ];
+      // Always return the same embedding shape for simplicity
+      mockModel2VecLoader.embed.mockResolvedValue([0.5, 0.5, 0.5]);
 
-      let embedCallCount = 0;
-      mockModel2VecLoader.embed.mockImplementation(async (text: string) => {
-        if (embedCallCount === 0) {
-          embedCallCount++;
-          return contentEmbedding;
-        }
-        return keywordEmbeddings[embedCallCount++ - 1];
-      });
-
-      mockModel2VecLoader.computeSimilarity.mockImplementation(
-        (emb1: number[], emb2: number[]) => {
-          // Simple dot product for testing
-          return emb1.reduce((sum, val, i) => sum + val * emb2[i], 0);
-        }
-      );
+      // Raw similarity scores chosen so normalization + weighting can be asserted
+      // typescript: raw 0.8  → normalized 0.9
+      // programming: raw 0.2 → normalized 0.6
+      // language: raw -0.2   → normalized 0.4
+      // static: raw -0.6     → normalized 0.2
+      // typing: raw -0.8     → normalized 0.1
+      mockModel2VecLoader.computeSimilarity
+        .mockReturnValueOnce(0.8) // typescript
+        .mockReturnValueOnce(0.2) // programming
+        .mockReturnValueOnce(-0.2) // language
+        .mockReturnValueOnce(-0.6) // static
+        .mockReturnValueOnce(-0.8); // typing
 
       // Act
       const response = await handler(event);
-
-      // Debug
-      if (!response.success) {
-        console.log('Error:', response.error);
-        console.log('Full response:', response);
-      }
 
       // Assert
       expect(response.success).toBe(true);
       expect(response.tags).toBeDefined();
       expect(response.tags!.length).toBeGreaterThan(0);
 
-      // Verify hybrid scoring: score = 0.7 * semantic + 0.3 * frequency
-      // typescript: 0.7 * 0.45 + 0.3 * 1.0 = 0.315 + 0.3 = 0.615
-      // programming: 0.7 * 0.35 + 0.3 * 0.8 = 0.245 + 0.24 = 0.485
+      // Verify hybrid scoring with 70/30 weighting
+      // typescript: semantic=0.9, frequency=1.0 → score=0.7*0.9+0.3*1.0 = 0.93
+      // programming: semantic=0.6, frequency=0.8 → score=0.7*0.6+0.3*0.8 = 0.66
+      // language: semantic=0.4, frequency=0.6 → score=0.7*0.4+0.3*0.6 = 0.46
       const typescriptTag = response.tags!.find((t) => t.tag === 'typescript');
+      const programmingTag = response.tags!.find((t) => t.tag === 'programming');
+      const languageTag = response.tags!.find((t) => t.tag === 'language');
+
       expect(typescriptTag).toBeDefined();
-      expect(typescriptTag!.score).toBeGreaterThan(0.3); // Above threshold
+      expect(programmingTag).toBeDefined();
+      expect(languageTag).toBeDefined();
+
+      expect(typescriptTag!.score).toBeCloseTo(0.93, 3);
+      expect(programmingTag!.score).toBeCloseTo(0.66, 3);
+      expect(languageTag!.score).toBeCloseTo(0.46, 3);
+
+      // Ensure ordering reflects hybrid mix
+      expect(typescriptTag!.score).toBeGreaterThan(programmingTag!.score);
+      expect(programmingTag!.score).toBeGreaterThan(languageTag!.score);
+      expect(response.tags!.map((t) => t.tag)).toEqual([
+        'typescript',
+        'programming',
+        'language',
+      ]);
     });
 
     it('should normalize semantic scores to 0-1 range before combining', async () => {
