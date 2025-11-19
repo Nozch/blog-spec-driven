@@ -8,11 +8,6 @@ variable "upstash_email" {
   description = "Email associated with the Upstash account"
 }
 
-variable "redis_region" {
-  type        = string
-  description = "Desired Upstash Redis region"
-  default     = "ap-northeast-1"
-}
 
 provider "upstash" {
   api_key = var.upstash_api_key
@@ -20,10 +15,11 @@ provider "upstash" {
 }
 
 resource "upstash_redis_database" "publisher_queue" {
-  database_name = "publisher-queue-${var.environment}"
-  region        = var.redis_region
-  tls           = true
-  eviction      = false
+  database_name   = "publisher-queue-${var.environment}"
+  tls             = true
+  eviction        = false
+  region          = "global" 
+  primary_region  = "ap-northeast-1"
 }
 
 output "redis_rest_url" {

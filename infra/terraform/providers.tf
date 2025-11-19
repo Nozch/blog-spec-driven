@@ -2,11 +2,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.46"
+      version = "~> 6.0"
     }
     upstash = {
       source  = "upstash/upstash"
-      version = "~> 1.3"
+      version = "~> 2.1"
     }
   }
 }
