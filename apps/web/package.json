@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "@blog-spec/editor": "workspace:*",
+    "@supabase/supabase-js": "^2.83.0",
     "@tiptap/react": "^2.27.1",
     "@tiptap/starter-kit": "^2.27.1",
     "next": "^16.0.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
