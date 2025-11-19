@@ -15,8 +15,8 @@ const publicEnvSchema = z.object({
 
 const serverEnvSchema = z.object({
   SUPABASE_URL: z.string().url({ message: 'SUPABASE_URL must be a valid URL (see quickstart.md)' }),
-  SUPABASE_ANON_KEY: z.string().min(1, { message: 'SUPABASE_ANON_KEY is required' }),
-  SUPABASE_SERVICE_ROLE: z.string().min(1, { message: 'SUPABASE_SERVICE_ROLE is required' }),
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(1, { message: 'SUPABASE_PUBLISHABLE_KEY is required' }),
+  SUPABASE_SECRET_KEY: z.string().min(1, { message: 'SUPABASE_SECRET_KEY is required' }),
   S3_DRAFT_BUCKET: z.string().min(1, { message: 'S3_DRAFT_BUCKET is required' }),
   AWS_REGION: z.string().min(1, { message: 'AWS_REGION is required' }),
   UPSTASH_REDIS_REST_URL: z
@@ -66,8 +66,8 @@ export const publicEnv: PublicEnv = {
 
 export const serverEnv: ServerEnv = {
   SUPABASE_URL: env.SUPABASE_URL,
-  SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE: env.SUPABASE_SERVICE_ROLE,
+  SUPABASE_PUBLISHABLE_KEY: env.SUPABASE_PUBLISHABLE_KEY,
+  SUPABASE_SECRET_KEY: env.SUPABASE_SECRET_KEY,
   S3_DRAFT_BUCKET: env.S3_DRAFT_BUCKET,
   AWS_REGION: env.AWS_REGION,
   UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL,

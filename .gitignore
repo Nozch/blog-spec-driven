@@ -4,7 +4,6 @@
 .specify/memory/*.md
 .specify/templates/*.md
 
-
 # Supabase temp files
 supabase/.temp/*
 
@@ -32,10 +31,9 @@ supabase/.temp/*
 **/*.tsbuildinfo
 pnpm-debug.log
 
-# Next.js
+# Next build
 **/.next
-next-env.d.ts
 
-# E2E test
-**/test-results/
-**/playwright-report/
+# env 
+.env.local
+

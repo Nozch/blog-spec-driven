@@ -3,8 +3,8 @@ import { afterAll, expect, test, vi } from 'vitest';
 const QUICKSTART_ENV = {
   NEXT_PUBLIC_BASE_URL: 'https://local.dev',
   SUPABASE_URL: 'https://supabase.dev',
-  SUPABASE_ANON_KEY: 'anon',
-  SUPABASE_SERVICE_ROLE: 'service',
+  SUPABASE_PUBLSIHABLE_KEY: 'anon',
+  SUPABASE_SECRET_KEY: 'service',
   S3_DRAFT_BUCKET: 'drafts-bucket',
   AWS_REGION: 'ap-northeast-1',
   UPSTASH_REDIS_REST_URL: 'https://redis.example',
