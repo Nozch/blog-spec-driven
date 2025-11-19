@@ -60,7 +60,7 @@ Based on plan.md, this is a web monorepo with:
 - [x] T019 [P] Create Terraform configuration for Upstash Redis in infra/terraform/redis-publisher.tf
 - [x] T020 [P] Setup AWS SES sender identity configuration in infra/terraform/ses.tf
 - [x] T021 [P] Create Supabase client factory with auth in apps/web/lib/supabase.ts
-- [x] T022 [P] Implement S3 client with signed URL generation in apps/web/lib/s3.ts
+- [x] T022 [P] Implement S3 client with signed URL generation in apps/web/src/lib/s3.ts
 - [x] T023 [P] Create base error handling middleware in apps/web/lib/middleware/error-handler.ts
 - [x] T024 [P] Implement logging infrastructure with author_id/article_id context in apps/web/lib/logger.ts
 - [x] T025 [P] Setup Web Vitals instrumentation for frontend.first_paint_ms in apps/web/lib/web-vitals.ts
