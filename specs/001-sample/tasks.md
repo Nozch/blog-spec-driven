@@ -97,7 +97,7 @@ Based on plan.md, this is a web monorepo with:
 - [x] T043 [P] [US1] Package Model2Vec distilled model (~8-30MB) for Lambda deployment in infra/aws/lambda/tag-ranker/model/
 - [x] T044 [US1] Implement semantic ranking with Model2Vec hybrid scoring (70% semantic, 30% frequency) in infra/aws/lambda/tag-ranker/handler.ts
 - [x] T045 [US1] Add 3s timeout and graceful fallback logic per FR-014 in infra/aws/lambda/tag-ranker/handler.ts
-- [ ] T046 [US1] Create POST /api/articles/[articleId]/tags/suggest route handler in apps/web/app/api/articles/[articleId]/tags/suggest/route.ts
+- [x] T046 [US1] Create POST /api/articles/[articleId]/tags/suggest route handler in apps/web/app/api/articles/[articleId]/tags/suggest/route.ts
 - [ ] T047 [US1] Add tag_suggestion.latency_ms and tag_suggestion.success_rate metrics per OR-002 in apps/web/app/api/articles/[articleId]/tags/suggest/route.ts
 - [ ] T048 [US1] Create POST /api/articles route handler for composing articles in apps/web/app/api/articles/route.ts
 - [ ] T049 [US1] Implement draft storage logic with S3 encryption in apps/web/lib/draft-storage.ts
@@ -399,6 +399,7 @@ With multiple developers:
 - Cross-cutting: 28 tasks (Phases 6-7)
 
 **E2E Test Tasks**: 5 new tasks added for User Story 1
+
 - T054: Basic typing and onChange callbacks
 - T055: Auto-save after edits with debouncing
 - T056: Text formatting (bold/italic) via toolbar and keyboard shortcuts

@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       '../app/(editor)/compose/page': composeAlias,
       '@blog-spec/editor': path.resolve(dirname, '../../packages/editor/src/index.ts'),
+      '@': path.resolve(dirname, './src'),
     },
   },
   test: {
@@ -24,6 +25,7 @@ export default defineConfig({
       'src/__tests__/**/*.spec.{ts,tsx}',
       'components/**/__tests__/**/*.test.{ts,tsx}',
       'src/lib/__tests__/**/*.test.{ts,tsx}',
+      'app/**/__tests__/**/*.test.{ts,tsx}',
     ],
   },
 });
